@@ -1,0 +1,51 @@
+/* Restyle stock controls without changing their IDs, handlers or API calls. */
+:root{color-scheme:dark;--nk-bg:#0b1017;--nk-panel:#121b27;--nk-high:#172232;--nk-text:#e9f0f7;--nk-muted:#9aacc0;--nk-line:#29394d;--nk-accent:#7cebd3}
+:root[data-theme=light]{color-scheme:light;--nk-bg:#f2f5f8;--nk-panel:#fff;--nk-high:#edf2f7;--nk-text:#15263b;--nk-muted:#566b82;--nk-line:#dce4ed;--nk-accent:#08796c}
+html,body,#container,#content{background:var(--nk-bg)!important;color:var(--nk-text)!important}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important}
+#navigator,#searchContainer .top,#searchContainer .bottom,#floatingbar,.musicBarInfo,#volumeProgressBar>div{background-color:var(--nk-panel)!important;background-image:none!important;border-color:var(--nk-line)!important;color:var(--nk-text)!important}
+#searchContainer a.logo{background:none!important;text-indent:0!important;color:var(--nk-accent)!important;font-size:19px;font-weight:700;width:210px!important;text-decoration:none}
+#navigator a{color:var(--nk-muted)!important;border-radius:7px}
+#navigator a:hover,#navigator a.menuSelected{background-color:var(--nk-high)!important;color:var(--nk-accent)!important}
+#navigator .navi01{margin-top:24px}
+#navigator .navi01 li,#navigator .navi02 li{margin-bottom:7px}
+#navigator .folderInfoDiv,.shortInfor,.pathLink,#floatingbar li,#floatingbar h4,#floatingbar p{color:var(--nk-muted)!important}
+.separateLine01,.separateLine02{background:var(--nk-line)!important}
+input,select,textarea{color:var(--nk-text)!important;background-color:var(--nk-high)!important;border-color:var(--nk-line)!important;border-radius:5px}
+input:disabled,button:disabled{opacity:.45}
+input[type=button],input[type=submit],button{cursor:pointer}
+.settingsTitle,.settingsTitle02,.settingDiv,.settingTrHover,.detail,.folderInfoDiv{color:var(--nk-text)!important;border-color:var(--nk-line)!important}
+.settingDiv{background:var(--nk-panel)!important;border-radius:8px;margin-bottom:6px}
+.settingTrHover:hover{background:var(--nk-high)!important}
+.settingDiv.authority.disable{opacity:.5;cursor:not-allowed!important}
+.settingDiv.authority.disable .lblBtn{cursor:not-allowed!important}
+.settingDiv.authority:not(.disable) [role=button]{cursor:pointer!important}
+.settingDiv [role=button]:focus-visible{outline:2px solid var(--nk-accent);outline-offset:4px}
+#nimbus-settings-sign-in{padding:7px 12px;margin-left:8px;background:var(--nk-high);color:var(--nk-accent);border:1px solid var(--nk-line);border-radius:6px}
+#nimbus-settings-access{color:var(--nk-muted);font:13px/1.6 system-ui;margin:10px 0;max-width:680px}
+table,th,td{border-color:var(--nk-line)!important;color:var(--nk-text)!important}
+th,.ui-widget-header{background:var(--nk-high)!important;color:var(--nk-text)!important;border-color:var(--nk-line)!important}
+tr:nth-child(even),.ui-widget-content,.blockMsg,.context-menu-list,.context-menu-item,#cboxContent,#cboxLoadedContent{background:var(--nk-panel)!important;color:var(--nk-text)!important;border-color:var(--nk-line)!important}
+.ui-dialog,.ui-dialog-content,.ui-dialog-titlebar,.popup,.popupWindow{background:var(--nk-panel)!important;color:var(--nk-text)!important;border-color:var(--nk-line)!important;background-image:none!important}
+.popupTop,.popupMiddle,.popupBottom,.popupMiddle2,.popupMiddle ul.popupList02 label,.selectDropdown div,.selectDropdown ul,.photoListItemsDiv,.photoAlbumsListItems li label,.musicAlbumsListItems li label,.settingDiv b,.addDynamicLoading,.addDynamicLoading2,#div-ios-msg div,#wifi-switch b{background-color:var(--nk-panel)!important;background-image:none!important;color:var(--nk-text)!important;border-color:var(--nk-line)!important}
+.popupMiddle p,.popupMiddle2 p,.popupMiddle label,.popupMiddle2 label,.popupTop h1,.popupTop h2,.popupTop h3,.popupTop h4,.settingDiv label{color:var(--nk-text)!important}
+.ui-widget-content a,.lblNormalBtn,.context-menu-item{color:var(--nk-text)!important}
+.ui-state-default,.ui-state-hover,.ui-state-active{background:var(--nk-high)!important;color:var(--nk-text)!important;border-color:var(--nk-line)!important}
+#nimbus-unified-host{display:none;position:relative;min-width:0;user-select:text;-webkit-user-select:text}
+body.nimbus-toolkit-open{overflow:auto!important}
+body.nimbus-toolkit-open #content{width:auto!important;height:auto!important;min-height:600px;padding:0 0 60px!important}
+body.nimbus-toolkit-open #content>*:not(#nimbus-unified-host){display:none!important}
+body.nimbus-toolkit-open #nimbus-unified-host{display:block}
+body.nimbus-toolkit-open #bottonList>*{visibility:hidden}
+#btnNimbusFieldKit{background:none!important;color:var(--nk-accent)!important;font-weight:700}
+#nimbus-integration-error{color:var(--nk-accent);padding:24px;font:14px/1.7 system-ui}
+#nimbus-global-controls{margin:20px 24px;display:flex;flex-direction:column;gap:8px}
+#nimbus-global-controls button,#nimbus-jump-dialog button{background:var(--nk-high)!important;color:var(--nk-text)!important;border:1px solid var(--nk-line);border-radius:7px;padding:10px;font:12px system-ui;text-align:left}
+#nimbus-global-controls button:hover,#nimbus-jump-dialog button:hover{border-color:var(--nk-accent)}
+#nimbus-jump-dialog{background:var(--nk-panel);color:var(--nk-text);border:1px solid var(--nk-line);border-radius:14px;padding:24px;width:540px;max-width:calc(100% - 32px);max-height:85vh;overflow:auto;font:14px/1.6 system-ui}
+#nimbus-jump-dialog::backdrop{background:#02070cbb}
+#nimbus-jump-dialog h2{font-size:22px;margin:0 0 8px}
+#nimbus-jump-dialog p{color:var(--nk-muted);margin:0 0 14px}
+#nimbus-jump-dialog input{width:calc(100% - 24px);padding:12px;margin:0 0 14px;font:14px system-ui}
+.nimbus-jump-results{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+@media(max-width:600px){.nimbus-jump-results{grid-template-columns:1fr}}

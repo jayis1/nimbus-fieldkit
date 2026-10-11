@@ -1,0 +1,15 @@
+# Telnet retirement trial — automatic restoration
+
+Device user supplied successful second root SSH access on persistent port 2224 after reboot. inetd master PID was 2614, `/usr/sbin/inetd` with no visible arguments; stock active Telnet entry is exactly `telnet stream tcp nowait root /bin/busybox telnetd -i`.
+
+`device/ssh/test-disable-telnet.sh` stages a one-time five-minute trial under a new private rootfs directory, refusing ambiguous inetd processes, unexpected Telnet entries, prior staging or concurrent config edits. It preserves inetd.conf metadata and all non-Telnet entries. A nohup rollback timer is checked alive before atomically replacing the configuration and signaling only the identified inetd master with SIGHUP. SIGHUP reload behavior must be verified live with fresh port probes; it is not proven solely by sending the signal.
+
+Automatic restoration runs after 300 seconds regardless of success, provided config still matches the trial candidate. It refuses to overwrite subsequent unrelated edits. It restores the original config and HUPs one identified current inetd master, or starts `/usr/sbin/inetd` if no master exists (matching the observed no-argument process). It never kills all inetd or Telnet sessions. Existing Telnet sessions may remain connected; test with a new client. Manual early restoration uses `sh /root/nimbus-ssh-test/telnet-trial-v1/restore.sh now`.
+
+Do not reboot, cancel the timer, edit inetd.conf, or change Wi-Fi during the trial. Timer does not survive reboot; this is an operational fallback, not independently verified disaster recovery. No permanent Telnet retirement has been performed. User must verify fresh pinned SSH sessions, refused new Telnet connections during the trial, and restored new Telnet connections afterward before permanent retirement is considered. Other inetd services, vendor HTTP/FTP, Wi-Fi, root passwords and firmware are unchanged.
+
+## Subsequent permanent retirement — user reported
+
+User confirmed the original Telnet entry and inetd port-23 listener were restored. They then applied the guarded permanent edit: backup in `/root/nimbus-ssh-test/telnet-off-v1/inetd.conf.before`, comment marker `NIMBUS-TELNET-OFF`, atomic replacement and SIGHUP to the identified inetd master. No port-23 listener remained. The old trial restore script requires a byte-for-byte match of its trial configuration, so it refuses to overwrite the different permanent marker.
+
+Following the requested reboot verification, user supplied root identity, the retained permanent marker and no port-23 listener output. Persistent SSH on port 2224 and permanent Telnet disabling are reported verified after reboot. Direct fresh Telnet-client refusal output was not supplied; local listener checks were. Existing pre-reboot Telnet sessions are not evidence of a remaining listener. No Wi-Fi mode change has yet been reported; next proposed step is vendor persistent WPA2-AES mode, with uplink SSH kept as management and rollback to previous `anywpa2` mode available through that path. Firmware recovery remains untested.

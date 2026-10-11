@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; base-uri 'none'; form-action 'none'">
+  <title>SanDisk / FieldKit</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="dashboard.js" defer></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="#overview" aria-label="FieldKit overview"><span class="brand-mark">N</span><span>SanDisk<span class="brand-sub">FIELDKIT / 04</span></span></a>
+  <div class="rail-label">WORKSPACE</div>
+  <nav aria-label="Dashboard sections">
+    <button class="nav-item active" data-view="overview"><span class="nav-icon">◈</span> Overview</button>
+    <button class="nav-item" data-view="features"><span class="nav-icon">⊞</span> Feature switches <span class="nav-count">10</span></button>
+    <button class="nav-item" data-view="network"><span class="nav-icon">↔</span> Network health</button>
+    <button class="nav-item" data-view="vault"><span class="nav-icon">▤</span> Vault &amp; sync</button>
+    <button class="nav-item" data-view="toolbox"><span class="nav-icon">⌘</span> Offline toolbox</button>
+    <button class="nav-item" data-view="security"><span class="nav-icon">◇</span> Security &amp; access</button>
+  </nav>
+  <div class="rail-bottom"><span class="status-dot"></span> LOCAL-FIRST, CLOUD-FREE<p>No monitor mode.<br>No firmware writes.</p><a id="stock-link" href="/" class="subtle-link">Open original SanDisk dashboard ↗</a></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><div class="breadcrumb">FIELD NODE <span>/</span> <strong id="section-name">Overview</strong></div><div class="top-actions"><span id="scope" class="badge">Connecting to data source</span><button id="theme" class="icon-button" aria-label="Switch to light mode">☼</button><button id="refresh" class="button compact">↻ Refresh</button></div></header>
+  <main>
+    <div id="notice" class="notice" role="status" aria-live="polite">Loading local dashboard…</div>
+    <section id="host-session" class="panel session hidden">
+      <div><h2>Unlock host session</h2><p>This development server runs on your computer. Device telemetry is separately labelled.</p></div>
+      <div class="input-row"><input id="token" type="password" autocomplete="off" aria-label="Terminal session token" placeholder="Session token from terminal"><button id="connect" class="button primary">Connect</button><button id="lock" class="button">Lock</button></div>
+    </section>
+    <section class="view" id="view-overview">
+      <div class="page-heading"><div><div class="eyebrow">YOUR POCKET NETWORK, UNDER CONTROL</div><h1>Field operations.<span class="accent"> Simplified.</span></h1><p>One local workspace for your Wi-Fi hub, tools, and files.</p></div><span class="badge" id="freshness">No telemetry yet</span></div>
+      <div class="metrics">
+        <article class="metric"><div class="metric-label">UPLINK GATEWAY <span>↗</span></div><strong id="gateway">—</strong><small id="uplink-caption">A route is not an Internet verification</small></article>
+        <article class="metric"><div class="metric-label">AVAILABLE STORAGE <span>▤</span></div><strong id="free">—</strong><small id="disk-caption">Waiting for a real snapshot</small></article>
+        <article class="metric"><div class="metric-label">MEMORY IN USE <span>▥</span></div><strong id="memory">—</strong><small>Free + buffers + cache estimate</small></article>
+        <article class="metric"><div class="metric-label">FEATURES ENABLED <span>⊞</span></div><strong id="enabled-count">—</strong><small id="enabled-caption">Actual saved ON/OFF state</small></article>
+      </div>
+      <div class="overview-grid">
+        <article class="panel"><div class="panel-heading"><div><h2>The local crew</h2><p>Each device has one clear job.</p></div><span class="badge good">No cloud dependency</span></div><div class="topology">
+          <div class="crew-node"><span class="node-icon">◈</span><strong>GameHack Zero</strong><small>Controller / R36XX</small></div><div class="crew-link">↔</div><div class="crew-node highlighted"><span class="node-icon">N</span><strong>SanDisk Nimbus</strong><small>Main Wi-Fi / field node when selected</small></div><div class="crew-link">↔</div><div class="crew-node"><span class="node-icon">⌘</span><strong>Pi Zero W</strong><small>Independent USB worker</small></div>
+        </div><p class="footnote">Phone hotspot → SanDisk uplink → downstream clients. Pi USB routing and pairing remain separate. This diagram does not assert that every device is currently connected.</p></article>
+        <article class="panel"><div class="panel-heading"><div><h2>Node details</h2><p>Measured, not invented.</p></div><span class="badge" id="publisher">Snapshot unavailable</span></div><dl class="details"><div><dt>Hostname</dt><dd id="hostname">—</dd></div><div><dt>Uptime</dt><dd id="uptime">—</dd></div><div><dt>Firmware / system</dt><dd id="firmware">—</dd></div><div><dt>Battery</dt><dd id="battery">Unknown</dd></div></dl></article>
+        <article class="panel"><div class="panel-heading"><div><h2>Traffic pulse</h2><p id="traffic-caption">Uplink counters; rates require two fresh snapshots.</p></div><span class="badge" id="rate">—</span></div><div id="traffic-bars" class="traffic-bars" aria-label="Measured receive-rate history"></div><div class="legend"><span><i class="legend-dot"></i> Receive</span><span id="traffic-totals">No samples yet</span></div></article>
+        <article class="panel"><div class="panel-heading"><div><h2>Quick actions</h2><p>Explicit actions, no surprise services.</p></div></div><div class="quick-actions"><button class="action-button" data-action="network_health"><span>↔</span><strong>Read network health</strong><small>Routes &amp; counters</small></button><button class="action-button" data-action="watchdog"><span>↻</span><strong>Run watchdog</strong><small>Bounded foreground checks</small></button><button class="action-button" data-action="storage_alerts"><span>▤</span><strong>Check storage</strong><small>Read-only free-space alert</small></button><button class="action-button" data-view="features"><span>⊞</span><strong>Manage features</strong><small>All ten ON/OFF switches</small></button></div></article>
+      </div>
+    </section>
+    <section class="view hidden" id="view-features">
+      <div class="page-heading"><div><div class="eyebrow">ONLY WHAT YOU CHOOSE</div><h1>Feature switches.</h1><p>Persistent settings. Missing dependencies stay visible and disabled.</p></div><span class="badge">Monitor mode excluded</span></div>
+      <div class="callout"><strong>Changes require terminal confirmation.</strong><span>A switch prepares a safe command for your authenticated device session. It does not change the display optimistically or expose a web shell.</span></div>
+      <div id="feature-grid" class="feature-grid"></div>
+    </section>
+    <section class="view hidden" id="view-network">
+      <div class="page-heading"><div><div class="eyebrow">KEEP THE LINK VISIBLE</div><h1>Network health.</h1><p>Interface counters, route inventory, and scoped diagnostics.</p></div><button class="button" data-action="network_health">Prepare health check</button></div>
+      <div class="two-column"><article class="panel"><div class="panel-heading"><h2>Interfaces</h2><span class="badge">Read-only</span></div><div id="interfaces" class="interface-list">Waiting for telemetry.</div><p class="footnote">Vendor monitor interfaces are not controlled or used by this dashboard.</p></article><article class="panel"><h2>Connected subnets</h2><div id="subnets" class="route-list">Waiting for telemetry.</div><div class="callout small"><strong>Internet ≠ a default route.</strong><span>The native publisher reads local counters. It does not silently send Internet probes or reconfigure Wi-Fi.</span></div></article></div>
+      <article class="panel native-only"><h2>Watchdog &amp; speed tests</h2><p>Prepare explicit terminal commands. Speed tests remain blocked until a compatible iperf build is installed.</p><div class="input-row"><button class="button" data-action="watchdog">Run watchdog</button><button class="button" data-action="speed_tests">Prepare speed test</button><button class="button" id="publish-command">Publish fresh snapshot</button></div></article>
+      <article class="panel host-only hidden"><h2>Authorized host diagnostics</h2><p>These run on the host, not inside the SanDisk. Configure an authorized CIDR when starting the development server.</p><div class="input-row"><input id="target" placeholder="Numeric target / DNS server IP" aria-label="Authorized target IP"><input id="ports" value="22,80,443" aria-label="TCP ports"><input id="dns-name" value="example.com" aria-label="DNS name"></div><p><label><input id="permission" type="checkbox"> I own this target or have permission to test it.</label></p><div class="input-row"><button id="check" class="button">TCP check</button><button id="ping" class="button">Ping</button><button id="dns" class="button">DNS</button><button id="routes" class="button">Host routes</button></div><pre id="diagnostic">No diagnostic performed.</pre></article>
+    </section>
+    <section class="view hidden" id="view-vault">
+      <div class="page-heading"><div><div class="eyebrow">YOUR FILES, WITH RECEIPTS</div><h1>Vault &amp; sync.</h1><p>Explicit copies, checksum verification, and no overwriting existing files.</p></div><span class="badge">64 MiB / file</span></div>
+      <div class="two-column"><article class="panel"><h2>Verified transfers</h2><p>Every native transfer requires a reviewed file and explicit destination.</p><div class="quick-actions"><button class="action-button" data-action="backup_vault"><span>▤</span><strong>Back up one file</strong><small>Local native vault</small></button><button class="action-button" data-action="file_sync"><span>⇄</span><strong>Sync one file</strong><small>Existing mounted directory</small></button><button class="action-button" data-action="encrypted_archives"><span>◇</span><strong>Store encrypted archive</strong><small>Encrypt on GameHack first</small></button><button class="action-button" data-action="local_git"><span>⌘</span><strong>Create local Git repo</strong><small>Requires compatible Git</small></button></div></article><article class="panel"><h2>Integrity, not assumptions</h2><p>SHA-256 confirms a transfer matches its source. It does not authenticate the author or prove an archive is encrypted.</p><p class="footnote">Native snapshots list up to 64 regular, simple-named vault files. No keys, settings databases, captures, or recursive directories are automatically copied. FAT/exFAT permissions are not encryption.</p><div class="callout small"><strong>No automatic sync.</strong><span>ON enables the explicit operation. It does not watch folders or copy your private files in the background.</span></div></article></div>
+      <article class="panel"><div class="panel-heading"><h2 id="vault-title">Native vault</h2><span class="badge" id="file-count">—</span></div><div id="files" class="file-list">No snapshot loaded.</div><pre id="hash" class="hash hidden"></pre></article>
+    </section>
+    <section class="view hidden" id="view-toolbox">
+      <div class="page-heading"><div><div class="eyebrow">READY EVEN OFFLINE</div><h1>The field toolbox.</h1><p>Local manuals, operating boundaries, and your Pi worker controls.</p></div><span class="badge good">Zero external assets</span></div>
+      <div class="two-column"><article class="panel"><h2>Bundled documentation</h2><div id="documents" class="document-list"></div><pre id="document" class="document-preview">Choose a document to read it here.</pre></article><article class="panel"><h2>Pi worker</h2><p>GameHack remains the controller. Dedicated Pi queue controls use its existing key-pinned USB SSH client.</p><dl class="details"><div><dt>USB address</dt><dd>192.168.77.1</dd></div><div><dt>Queue controls</dt><dd>Submit / status / result / cancel</dd></div><div><dt>SanDisk pairing</dt><dd>Not configured</dd></div></dl><div class="callout small"><strong>Use the GameHack menu.</strong><span>CONNECT → SanDisk / main Wi-Fi unit → Pi queue. No keys or remote commands are routed through this static dashboard.</span></div><button class="button" data-action="pi_jobs">View pairing requirements</button></article></div>
+    </section>
+    <section class="view hidden" id="view-security">
+      <div class="page-heading"><div><div class="eyebrow">KEEP THE RECOVERY PATH</div><h1>Security &amp; access.</h1><p>Know what is exposed before changing anything.</p></div><span class="badge warning">Legacy firmware</span></div>
+      <div class="two-column"><article class="panel"><h2>Service inventory</h2><p id="service-source">No live service inventory loaded.</p><div id="services" class="service-list"></div><button class="button host-only hidden" id="node-check">Probe configured device</button><pre id="node" class="hidden"></pre></article><article class="panel"><h2>Administration checklist</h2><ol class="checklist"><li>Use WPA2-AES and a trusted management network.</li><li>Keep passwords and private keys out of dashboard files.</li><li>Establish a maintained, key-only, pinned SSH connection.</li><li>Test a second session, reboot, and recovery.</li><li>Only then disable unnecessary Telnet / FTP.</li></ol><p class="footnote">An installed SSH binary or listening port is not proof of secure authentication. Do not disable your only working administration path.</p><div class="host-only hidden"><button id="privacy" class="button">Enable local host privacy</button><p id="privacy-state" class="footnote">This affects only the host prototype, never SanDisk services.</p></div></article></div>
+      <article class="panel"><h2>Native publisher</h2><p>The browser reads one JSON snapshot. It cannot invoke shell commands, change radios, collect credentials, or disable services. Stop the publisher with Ctrl+C; the stock dashboard remains intact.</p><button class="button" id="publisher-command">Prepare bounded publisher</button></article>
+    </section>
+    <footer><span>SANDISK / FIELDKIT</span><span id="last-updated">No snapshot loaded</span><span>Local tools. Explicit control.</span></footer>
+  </main>
+</div>
+<dialog id="command-dialog" aria-labelledby="command-title"><div class="dialog-heading"><div><div class="eyebrow">TERMINAL CONFIRMATION</div><h2 id="command-title">Prepared command</h2></div><button id="close-dialog" class="icon-button" aria-label="Close command dialog">×</button></div><p id="command-description"></p><div id="command-inputs" class="command-inputs"></div><textarea id="command-text" readonly aria-label="Command to run in the authenticated SanDisk terminal" spellcheck="false"></textarea><div class="dialog-actions"><button id="copy-command" class="button primary">Copy command</button><button id="close-command" class="button">Close</button></div><p class="footnote">Nothing runs when you click Copy. Execute in your authenticated device session, then publish/refresh a snapshot. No root or firmware changes are included.</p></dialog>
+</body>
+</html>

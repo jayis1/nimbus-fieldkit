@@ -1,0 +1,12 @@
+--- a/src/netio.c
++++ b/src/netio.c
+@@ -622,6 +622,9 @@
+ 		if(interface && setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, interface, strlen(interface)) < 0) {
+ 			dropbear_log(LOG_WARNING, "Couldn't set SO_BINDTODEVICE");
+ 			TRACE(("Failed setsockopt with errno failure, %d %s", errno, strerror(errno)))
++			/* Nimbus: never listen unrestricted when interface binding fails. */
++			close(sock);
++			continue;
+ 		}
+ #endif
+ 

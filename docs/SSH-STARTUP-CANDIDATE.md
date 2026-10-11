@@ -1,0 +1,19 @@
+# Persistent SSH staging v1
+
+User reported successful root/public-key login on patched port 2224. The negative nonexistent-interface test exited 1 with no listening ports. This verifies the revised binary's interface failure path and interactive login on this device, not complete hardening or reboot behavior.
+
+`device/ssh/start-ssh.sh` pins the revised binary checksum, checks key-file availability, waits less than 120 seconds for wlan1, and execs the patched key-only server on IPv4 port 2224 with SO_BINDTODEVICE restriction. DHCP address changes do not require changing the listener address. Bind/interface failures stop it rather than falling back to unrestricted listening. No restart/watchdog is installed; failures require inspection. Only wlan1 management is provided, so an absent hotspot/uplink will not provide SSH recovery via the downstream AP.
+
+`device/ssh/install-startup.sh` must run from a newly created `/root/nimbus-ssh-test/startup-v1`, verifies its packaged script checksums and candidate binary, refuses prior integration/staging, backs up executable rc.local with metadata, syntax-checks its additive hook, checks for concurrent original-file changes and moves the prepared file into place. Existing start/stop logic is preserved. Hook starts SSH in the background only for `start`, stdin disconnected, stderr/stdout in private `/root/nimbus-ssh-test/boot.log`. Logs are not rotated yet; monitor their size. Script does not start/stop a daemon or reboot. There are no Telnet, inetd, Wi-Fi or firewall edits.
+
+Before reboot: keep root Telnet and old test port 2222 usable; stop only the patched foreground port-2224 server with Ctrl+C in its controlling Telnet window, then manually launch the exact startup script with boot redirections. Check private boot log and two independent pinned key logins on port 2224, plus password rejection. Save the host pin/public keys and boot-script backup off-device. Do not confuse rootfs copy with verified disaster recovery.
+
+Guarded boot-hook rollback from authorized root access: confirm `diff /root/nimbus-ssh-test/startup-v1/rc.local.before-ssh /etc/rc.d/rc.local` contains only the added NIMBUS-KEY-SSH-V1 block and no subsequent user changes, then `cp -p` the backup to a fresh temporary file alongside rc.local and `mv` it into place, followed by `sync`. This removes future boot startup only; it does not kill the current SSH service. Do not blindly restore a backup over later edits. Root Telnet remains available throughout the staging and subsequent reboot test.
+
+Persistent hook is a candidate until installation output is supplied. Actual uplink changes, AP-side exclusion, reboot behavior, log rotation, recovery, and eventual Telnet retirement remain separate gates. Maintained SSH does not repair the old kernel or plaintext vendor HTTP/FTP administration.
+
+## User-supplied live validation
+
+User confirmed rc.local contains the additive NIMBUS-KEY-SSH-V1 start hook; original backup is 1827 bytes and executable. The initial manual launches correctly failed because the test listener still held port 2224. `/proc` and netstat confirmed that listener PID 1962; user terminated only that parent from Telnet. A subsequent launcher produced PID 2049, wlan1 binding with no warning, and successful fresh root login.
+
+After the requested controlled reboot, user supplied root identity, boot.pid 3448, and new log entries showing successful wlan1 binding and foreground operation. SSH startup has therefore been reported working after one reboot. Earlier log failures belong to prior port conflicts and are not new boot failures. No Telnet disabling or Wi-Fi mode change has been reported. Separate second-session post-reboot confirmation, downstream-interface exclusion, full disaster recovery and automatic rollback for Telnet retirement are still pending.
