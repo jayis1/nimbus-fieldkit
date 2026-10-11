@@ -17,7 +17,7 @@ Offline provisioning/rescue follow-up: 90 local tests pass, including real host-
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
 | Image boot and vendor behavior | BLOCKED | Native boot, charging, battery, media, AP/uplink, USB transitions and restart behavior |
 | Recovery/restoration | Installed rescue located offline; restore BLOCKED | Matching verified rescue route and successful restore; raw-backup checksums alone are insufficient |
-| SD writes | Live writes, reboot/PC/post-return readback and normal-state USB outbound/return PASSED; image gate pending | Boot returns to ro; writable-SD handoff and safe image mount policy remain unverified; see SD validation evidence |
+| SD writes | Live writes, reboot/readback, normal-state USB cycle and writable-SD outbound handoff PASSED; image gate pending | Boot returns to ro; writable-SD cycle return/readback and safe image mount policy remain unverified; see SD validation evidence |
 | GameHack downstream pairing | BLOCKED | wlan0 policy plus pinned fresh handheld pairing/transfer; no global management exposure |
 | Legacy services/accounts | BLOCKED | HTTP/FTP dependency and privacy review, account/reset behavior, logs and access restrictions |
 | Vendor redistribution | BLOCKED | Applicable SanDisk/QSI/Tuxera and other binary license permissions |
