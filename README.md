@@ -576,7 +576,7 @@ The associated GameHack staging tree is a separate project/workspace. Its newer 
 | Recovery/update feasibility | [CUSTOM-FIRMWARE-FEASIBILITY.md](docs/CUSTOM-FIRMWARE-FEASIBILITY.md) |
 | Built rootfs candidate and provisioning gates | [CUSTOM-ROOTFS-CANDIDATE.md](docs/CUSTOM-ROOTFS-CANDIDATE.md) |
 | Public preview assets and production blockers | [PRODUCTION-READINESS.md](docs/PRODUCTION-READINESS.md) |
-| Planned Android/iOS companion apps and paired API | [MOBILE-COMPANION-APPS.md](docs/MOBILE-COMPANION-APPS.md) |
+| Planned two-part GameHack/SanDisk Android/iOS companion | [MOBILE-COMPANION-APPS.md](docs/MOBILE-COMPANION-APPS.md) |
 
 Some documents are chronological investigation notes. Earlier statements may be superseded by explicitly recorded follow-ups. Do not copy an old diagnostic command or deployment assumption without reading the current status and later entries.
 
@@ -627,7 +627,7 @@ There is no promised flash date. A safe release requires evidence, not merely a 
 
 ### Android and iOS companion apps
 
-Provide an independent optional Nimbus FieldKit companion for Android and iOS alongside the production-image release track. Planned scope includes paired drive access, file transfers, media, storage/battery status and supported feature switches. The original enhanced homepage remains available without an app. A secure versioned device API, real-phone tests, signing and platform distribution are prerequisites; no apps are implemented or released yet. See [mobile companion plan](docs/MOBILE-COMPANION-APPS.md).
+Provide **one two-part Android/iOS companion for GameHack Zero and SanDisk**, with independent handheld and drive sections plus optional shared storage/media/backup workflows. GameHack remains usable without SanDisk, and Pi USB networking stays independent. Each device needs its own paired identity and scoped API. The original enhanced homepage remains available without an app. Real-phone tests, signing and platform distribution are prerequisites; no mobile app is implemented or released yet. See [mobile companion plan](docs/MOBILE-COMPANION-APPS.md).
 
 ## Troubleshooting
 

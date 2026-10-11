@@ -22,13 +22,13 @@ Offline provisioning/rescue follow-up: 90 local tests pass, including real host-
 | Legacy services/accounts | BLOCKED | HTTP/FTP dependency and privacy review, account/reset behavior, logs and access restrictions |
 | Vendor redistribution | BLOCKED | Applicable SanDisk/QSI/Tuxera and other binary license permissions |
 | Deployment/update path | BLOCKED | Reviewed format/partition preservation, abort behavior, power-loss and rollback considerations |
-| Android/iOS companions | Planned, not implemented | Versioned secure paired API, real-device client tests, signing/distribution and compatibility matrix; see mobile companion plan |
+| Two-part Android/iOS companion | Planned, not implemented | Independently paired GameHack/SanDisk APIs, optional shared workflows, real-device client tests, signing/distribution and compatibility matrix |
 
 `python3 scripts/audit-image-readiness.py build/nimbus-custom-rootfs-candidate-v1` produces a read-only integrity/blocker report. Exit 2 means artifacts pass integrity but are not release/flash approved; exit 1 means invalid/mismatched artifacts. The script never turns mutable manifest booleans into a hardware certification and never flashes or mounts anything.
 
 ## Public preview assets
 
-The user additionally requested Android and iOS companion apps for the production-image release track. See [mobile companion apps](MOBILE-COMPANION-APPS.md). This is planned work, not an official vendor app update or an already deployed mobile backend. It must not weaken current SSH or vendor-service restrictions.
+The user additionally requested **one two-part Android/iOS companion for both GameHack Zero and SanDisk** for the production release track. See [mobile companion apps](MOBILE-COMPANION-APPS.md). GameHack must work independently of the optional drive; shared workflows require both devices' explicit authorization and verified capabilities. This is planned work, not an official vendor app update or an already deployed mobile backend. It must not weaken current SSH/vendor-service restrictions or change Pi USB networking.
 
 Publish first-party source/customization overlays, checksums, build instructions and these explicit limits. Do not include vendor stock rootfs, extracted web assets, proprietary binaries, firmware blobs, calibration, private keys or settings backups. GitHub's source archives and a source-preview bundle are source downloads, **not** an installable firmware image.
 
