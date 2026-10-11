@@ -109,7 +109,7 @@ The following records the development checkpoint, not a guarantee for another dr
 | Custom SSH | Patched Dropbear 2026.94, public-key login, pinned host key, independent sessions and reboot startup verified by the user | `wlan1` only; image provisioning and GameHack pairing are separate |
 | Telnet | Persistent inetd entry disabled; no port-23 listener in the supplied post-reboot checks | Other legacy services and vendor account behavior still need review |
 | Wi-Fi encryption | User verified AP CCMP-only operation and WPA2-PSK/CCMP hotspot uplink after reboot | Unique passphrase strength and full client/forwarding behavior are separate checks |
-| Settings usability fix | Explicit web sign-in, locked-state explanation and keyboard controls implemented; local browser tests pass | Not yet applied to the live homepage; real vendor login/click behavior needs validation |
+| Settings usability fix | Guarded live patch installed; served hashes verified; user reports Settings working | Basic live usability confirmed, not an exhaustive control test or native candidate-image validation |
 | GameHack library | Backup/restore, mounted media, favorites, notes, switches and storage doctor implemented in the associated staging tree | Not deployed to a handheld card or validated with native playback |
 | 128GB SD card | Full card detected at about 119GiB; block device and partition later report writable | Filesystem remains mounted read-only; actual write operation remains unresolved |
 | Custom rootfs image | 256MiB ext3 candidate built; offline filesystem check and artifact checksums pass | No native boot, verified rescue/restoration, or vendor update package |
@@ -604,7 +604,7 @@ Private backups are recovery material, not release assets. Release visibility an
 
 ### Near term
 
-- Validate browser sign-in and non-destructive Settings behavior after the guarded live UI-only patch; served hashes and unchanged homepage have been verified, without flashing.
+- Preserve the verified live Settings fix; the user reports Settings working after the patch. Native candidate-image Settings behavior remains a separate validation gate.
 - Design a safe candidate SD-access policy without silently overriding boot-time read-only detection. Live bounded writes, reboot readback and both normal/writable-SD USB cycles passed; [evidence and remaining limits](docs/SD-VALIDATION.md).
 - Keep candidate-image SD validation separate from the existing firmware's live test results; retained-marker cleanup is still pending.
 - Pair GameHack through a reviewed downstream management path without exposing SSH globally.
@@ -641,7 +641,7 @@ The listener is restricted to `wlan1`; GameHack is expected on `wlan0`. This is 
 
 ### Settings look correct but administrative rows do nothing
 
-Web-admin authentication is independent of SSH. The guarded live Settings patch adds an explicit **Sign in** button and locked-state explanation; hard-refresh the page if they are missing. Enter the device web-admin password there, not the SSH key passphrase. The patch does not bypass authentication or guarantee that every vendor setting is supported; actual browser behavior still needs validation.
+Web-admin authentication is independent of SSH. The guarded live Settings patch adds an explicit **Sign in** button and locked-state explanation; hard-refresh the page if they are missing. Enter the device web-admin password there, not the SSH key passphrase. The user reports Settings working after installation. The patch does not bypass authentication or guarantee that every vendor setting is supported; destructive controls and native candidate-image behavior have not been validated.
 
 ### The old standalone dashboard still appears
 

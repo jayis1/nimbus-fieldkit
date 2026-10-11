@@ -12,7 +12,7 @@ Offline provisioning/rescue follow-up: 90 local tests pass, including real host-
 | --- | --- | --- |
 | Source regression | Latest recorded full workspace suite passes; clean-clone CI added | Source tests, shell syntax and tracked-file hygiene |
 | Generic offline image integrity | Passed for local v1 | SHA-256 list, geometry, offline fsck |
-| Settings interaction | Guarded live UI patch installed; served hashes verified; browser gate pending | Real web-admin login and supported non-destructive controls |
+| Settings interaction | Basic live usability PASSED by user report; served hashes verified | User confirms Settings work after patch; not an exhaustive control/destructive-operation test |
 | Live SSH/Telnet/WPA2 transition | User verified on installed device | Separate from candidate-image boot/provisioning |
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
 | Image boot and vendor behavior | BLOCKED | Native boot, charging, battery, media, AP/uplink, USB transitions and restart behavior |
@@ -48,6 +48,8 @@ The user executed the guarded r1 package install from `/root/nimbus-settings-fix
 | `fieldkit-v06/stock-dark.css` | `d1428615bd883030f5d11089aeb4a802eb0ca448c588e076baa9db53ac700164` |
 
 Private original asset copies remain under `/root/nimbus-settings-fix-r1/backups`. Guarded rollback, only if needed and after review: `sh /root/nimbus-settings-fix-r1/install-settings-fix.sh rollback`. No rollback has been performed. Package installation is not proof of actual browser sign-in/click behavior.
+
+Following the requested hard-refresh, explicit web-admin sign-in and non-destructive dialog checks, the user reported: **"yes settings work now"**. This establishes user-reported basic live Settings usability after the patch. No per-control test matrix was supplied, and no reset, format, firmware upgrade or saved network change is represented as tested. The candidate image's native Settings behavior remains part of its separate boot/vendor-functionality gate.
 
 Real web-admin login is still required. Testing the patched live page must not involve format/reset/firmware upgrades; use non-destructive navigation and Settings dialogs only.
 
