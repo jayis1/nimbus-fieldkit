@@ -10,14 +10,16 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BEFORE = 'd1428615bd883030f5d11089aeb4a802eb0ca448c588e076baa9db53ac700164'
+R1 = '232c5a167045871adb8282e59b097378d27589d60953c6b6daf4a9afb6068459'
 
 
-def installer(after):
+def installer(after, from_r1=False):
     # Reuse the reviewed single-asset baseline/backup/atomic replace/rollback policy.
     spec = importlib.util.spec_from_file_location('single_asset_patch', ROOT/'scripts/package-flash-warning-fix.py')
     policy = importlib.util.module_from_spec(spec); spec.loader.exec_module(policy)
-    script = policy.installer(after).replace(policy.BASELINE, BEFORE)
-    script = script.replace('/root/nimbus-flash-warning-r1', '/root/nimbus-upload-loader-r1')
+    script = policy.installer(after).replace(policy.BASELINE, R1 if from_r1 else BEFORE)
+    stage = '/root/nimbus-upload-loader-r2' if from_r1 else '/root/nimbus-upload-loader-r1'
+    script = script.replace('/root/nimbus-flash-warning-r1', stage)
     script = script.replace('/nimbus/data/js', '/nimbus/data/fieldkit-v06').replace('t4u.controller.js', 'stock-dark.css')
     script = script.replace('nimbus-warning-new', 'nimbus-upload-new')
     script = script.replace('Only the exact vendor controller startup warning.', 'CSS-only upload/busy-loader update.')
@@ -27,16 +29,18 @@ def installer(after):
     return script
 
 
-def build(output):
+def build(output, from_r1=False):
     output = Path(output)
     if output.exists() or output.is_symlink(): raise ValueError('Refusing existing artifact')
     css = (ROOT/'device/unified/stock-dark.css').read_bytes()
     marker = b'/* Upload/busy card:'
     if css.count(marker) != 1 or hashlib.sha256(css.split(marker, 1)[0]).hexdigest() != BEFORE:
         raise ValueError('Patch must extend the exact installed Settings stylesheet, not rewrite it')
+    if from_r1 and hashlib.sha256(css.split(b'/* The vendor mounts',1)[0]).hexdigest() != R1:
+        raise ValueError('Correction must extend the exact r1 stylesheet')
     after = hashlib.sha256(css).hexdigest()
-    files = {'stock-dark.css': css, 'install.sh': installer(after).encode()}
-    report = {'schema':'nimbus-upload-loader/v1', 'before_sha256':BEFORE, 'after_sha256':after,
+    files = {'stock-dark.css': css, 'install.sh': installer(after, from_r1).encode()}
+    report = {'schema':'nimbus-upload-loader/v1', 'before_sha256':R1 if from_r1 else BEFORE, 'after_sha256':after,
               'status':'candidate/not installed', 'scope':'one CSS asset; no upload transport changes',
               'progress':'indeterminate', 'reduced_motion':True, 'public_redistribution':True}
     files['MANIFEST.json'] = (json.dumps(report, indent=2)+'\n').encode()
@@ -54,5 +58,6 @@ def build(output):
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--from-r1',action='store_true',help='Guarded r2 correction for the exact installed r1 stylesheet')
     args=parser.parse_args()
-    print(json.dumps(build(args.output),indent=2))
+    print(json.dumps(build(args.output,args.from_r1),indent=2))

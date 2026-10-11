@@ -61,3 +61,8 @@ body.nimbus-toolkit-open #bottonList>*{visibility:hidden}
 @keyframes nimbus-upload-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){#div-short-block-msg::before{animation:none}#div-short-block-msg #btnMessageCancel2{transition:none}}
 @media(max-width:480px){.blockUI.blockMsg:has(#div-short-block-msg){top:12px!important;right:12px!important;width:calc(100vw - 24px)!important}}
+/* The vendor mounts this card inside a clipped, low-stacking header. */
+body>div:has(>#searchContainer .blockMsg #div-short-block-msg){z-index:10020!important;overflow:visible!important}
+#searchContainer:has(.blockMsg #div-short-block-msg){z-index:10020!important;overflow:visible!important}
+#searchContainer .top:has(.blockMsg #div-short-block-msg){overflow:visible!important}
+.blockUI.blockMsg:has(#div-short-block-msg){z-index:10030!important}

@@ -40,3 +40,14 @@ class UploadLoaderTests(unittest.TestCase):
             target.write_bytes(new)
             subprocess.run(['sh',str(path),'rollback'],capture_output=True,check=True)
             self.assertEqual(target.read_bytes(),old)
+
+    def test_r2_uses_exact_r1_baseline_and_separate_stage(self):
+        css=(ROOT/'device/unified/stock-dark.css').read_bytes()
+        self.assertEqual(hashlib.sha256(css.split(b'/* The vendor mounts',1)[0]).hexdigest(),loader.R1)
+        with tempfile.TemporaryDirectory() as folder:
+            report=loader.build(Path(folder)/'r2.tar',from_r1=True)
+        self.assertEqual(report['before_sha256'],loader.R1)
+        script=loader.installer(report['after_sha256'],from_r1=True)
+        self.assertIn('/root/nimbus-upload-loader-r2',script)
+        self.assertIn(loader.R1,script)
+        self.assertNotIn(loader.BEFORE,script)

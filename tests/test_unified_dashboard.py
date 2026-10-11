@@ -145,9 +145,21 @@ class UnifiedTests(unittest.TestCase):
             const busyRect=busy.getBoundingClientRect();
             checks.push(busyRect.left>=0 && busyRect.right<=innerWidth);
             checks.push(getComputedStyle(document.getElementById('btnMessageCancel2')).height==='34px');
+            // Reproduce a file-header stacking overlap over the card's lower half.
+            const obstruction=document.createElement('div');
+            obstruction.className='fixedTitleHead';obstruction.textContent='Name  Date  Type  Size';
+            obstruction.style.cssText=`position:fixed;left:0;right:0;top:${busyRect.top+40}px;height:80px;z-index:9999;background:rgb(30,40,50)`;
+            document.body.append(obstruction);
+            const cancelRect=document.getElementById('btnMessageCancel2').getBoundingClientRect();
+            const hit=document.elementFromPoint(cancelRect.left+cancelRect.width/2,cancelRect.top+cancelRect.height/2);
+            checks.push(hit?.id==='btnMessageCancel2');
+            checks.push([[busyRect.left+8,busyRect.bottom-8],[busyRect.right-8,busyRect.bottom-8]].every(([x,y])=>busy.contains(document.elementFromPoint(x,y))));
             document.getElementById('btnMessageCancel2').click();
             await new Promise(resolve=>setTimeout(resolve,500));
             checks.push(cancelled===1 && getComputedStyle(busy).display==='none');
+            checks.push(getComputedStyle(document.getElementById('searchContainer')).zIndex!=='10020');
+            checks.push(getComputedStyle(document.getElementById('searchContainer').parentNode).zIndex!=='10020');
+            obstruction.remove();
             document.getElementById('nimbus-global-theme').click();
             checks.push(document.documentElement.dataset.theme==='light');
             t4u.elementBlockUI('Uploading');
