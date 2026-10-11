@@ -97,6 +97,44 @@ ssh -o StrictHostKeyChecking=yes \
 
 Do not run this shell script from an untrusted modified file. It performs no signal, service stop, sync, mount change, watchdog open, firmware helper or reboot. Physical writer counts/service hashes remain pending. Fixture tests exercise octal read/write fd flags, shared writable root mappings, missing metadata, USB/root-identity refusal and unchanged local files without exposing fixture private names.
 
-Checkpoint: **123 local tests pass**. No physical writer inventory, management handover or remount has yet been performed. v4 image artifacts are unchanged.
+Initial writer-helper checkpoint: **123 local tests passed**. Physical writer inventory, management handover and remount had not yet been performed at that checkpoint. v4 image artifacts are unchanged.
+
+### Subsequent physical writer evidence
+
+User inventory reports `nimbus` PID 3288 with one writable root fd, the existing `dropbearmulti-b` parent PID 3423 with two, and the current SSH `dropbear` session PID 6475 with two. Total: three holder processes, five writable root fds, zero shared writable root mappings, zero incomplete/raced observations reported in that scan. All four live service-script hashes exactly match the stock review table. PIDs are transient, **not stop targets**. The scanner suppresses fd paths, so the observed SSH fds are consistent with—but not path-proven to be—the inherited boot log. No services were stopped.
+
+### Optional temporary management listener: first handover stage only
+
+`device/ssh/capture-listener.sh` defaults to `--check` with no staging/launch. Explicit `--start` adds **one additional temporary listener** on `wlan1` IPv4 TCP **2225**, using the installed hash-pinned fail-closed/key-only Dropbear and the existing host/admin keys. No credentials are copied or regenerated. Root-owned private directory/key metadata, writable tmpfs `/tmp`, interface presence, inactive USB export and unoccupied port are checked. It refuses an existing stage rather than overwrite or silently resume it.
+
+Only the explicit start action creates mode-0700 `/tmp/nimbus-capture-ssh-v1/` and launches the foreground server with `nohup setsid`, stdin `/dev/null`, stdout/stderr in a mode-0600 private tmpfs log and PID file in that stage. No rootfs log is deliberately opened by this launcher. An observed live PID/listening-table entry is **not authenticated management verification or exclusive socket-ownership proof**. Failure retains private staging and does not stop any old process; inspect rather than rerun blindly. No port-2224 stop, vendor-service action, boot-hook change, remount or reboot occurs. Existing inherited descriptors still need the writer scan through the new connection.
+
+From the trusted PC, the optional start is:
+
+```sh
+ssh -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
+  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
+  -p 2224 root@172.16.10.178 'sh -s -- --start' \
+  < device/ssh/capture-listener.sh
+```
+
+This command is **not read-only**: it adds a temporary network listener and private RAM-backed staging. It does not change the existing management listener. Treat it as a short supervised trial, not an unattended install; logging is not rotated/capped and `/tmp` is only 4 MiB. The new listener/stage do not survive reboot; normal boot still starts the unchanged port-2224 service. No automatic shutdown timer is promised and no teardown has yet been performed.
+
+After reported startup, verify a fresh connection using the **existing port-2224 host pin**, not a newly trusted key:
+
+```sh
+ssh -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
+  -o HostKeyAlias='[172.16.10.178]:2224' \
+  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
+  -p 2225 root@172.16.10.178 'id'
+```
+
+`HostKeyAlias` looks up the already pinned identity under the old endpoint; it does not disable host verification, change the key, or edit the known-hosts file. If the old pin is unavailable or a mismatch occurs, stop rather than accept an unfamiliar key. A changed DHCP address needs a separately validated existing-pin lookup, not blindly substituting an alias.
+
+Then run the root-writer inventory through port 2225 with that same alias, and keep an independent interactive port-2225 session available. Only after fresh pinned login and no writable root fds from the replacement server/session are demonstrated should a reviewed handover consider stopping the exact old management processes. Unknown holders or failures stop the plan; neither stale PIDs nor broad process-name killing is acceptable. Native new-listener launch, password rejection, root-descriptor absence, handover and cleanup results remain pending.
+
+Temporary-listener helper checkpoint: **128 local tests pass**, including check-only no-launch/no-staging behavior, refusal of unsafe key metadata, changed binary hash, occupied port and prior staging, and private retained staging after a failed harmless fixture launch. No fixture launches an SSH server or touches the drive. These tests do not establish native handover or remount safety.
 
 No remount trial helper is shipped by this review. Current images remain non-flash-certified, and installed rescue still automatically invokes its updater. Source review narrows the next experiment; it does not establish recoverability or authorize firmware writes.
