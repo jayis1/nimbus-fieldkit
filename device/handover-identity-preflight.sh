@@ -76,6 +76,7 @@ identity vendor_writer "$vendor" /nimbus/nimbus b2472e7c34c22b2bb7dbda2d58ce8836
 root_device=$(stat -c '%d' /)
 for owner in "$old" "$replacement" "$vendor"; do
     known_log=0; other=0; incomplete=0
+    vendor_debug=0; vendor_api=0; vendor_settings=0
     for fd in "/proc/$owner"/fd/[0-9]*; do
         [ -L "$fd" ] && [ -f "$fd" ] || continue
         device=$(stat -L -c '%d' "$fd" 2>/dev/null) || { incomplete=$((incomplete+1)); continue; }
@@ -85,10 +86,32 @@ for owner in "$old" "$replacement" "$vendor"; do
         access=$((0$flags & 3))
         case "$access" in 1|2) :;; *) continue;; esac
         target=$(readlink "$fd" 2>/dev/null || :)
-        if [ "$target" = "$base/boot.log" ]; then known_log=$((known_log+1)); else other=$((other+1)); fi
+        case "$target" in
+            "$base/boot.log") known_log=$((known_log+1));;
+            /nimbus/debug_log.txt) vendor_debug=$((vendor_debug+1)); other=$((other+1));;
+            /nimbus/xml_log.txt) vendor_api=$((vendor_api+1)); other=$((other+1));;
+            /nimbus/settings.db) vendor_settings=$((vendor_settings+1)); other=$((other+1));;
+            *) other=$((other+1));;
+        esac
     done
     printf 'pid=%s writable_known_boot_log_fds=%s other_writable_root_fds=%s incomplete=%s\n' "$owner" "$known_log" "$other" "$incomplete"
+    printf 'pid=%s known_vendor_debug_log_fds=%s known_vendor_api_log_fds=%s known_vendor_settings_db_fds=%s unclassified_root_fds=%s\n' \
+        "$owner" "$vendor_debug" "$vendor_api" "$vendor_settings" "$((other-vendor_debug-vendor_api-vendor_settings))"
 done
+echo 'Restart inputs read as data only (not sourced or executed):'
+restart_input() {
+    name="$1"; file="$2"; expected="$3"
+    result=unavailable_or_unsafe
+    if [ -f "$file" ] && [ ! -L "$file" ] && [ "$(stat -c '%s' "$file")" -le 1048576 ]; then
+        actual=$(sha256sum "$file" | awk '{print $1}')
+        if [ "$actual" = "$expected" ]; then result=matched; else result=different; fi
+    fi
+    printf 'restart_input=%s status=%s\n' "$name" "$result"
+}
+restart_input nimbus_service /etc/rc.d/init.d/service/S20nimbus 2dc2ed86ca1936b41e7183f425dcd6794ceed52c8139b852564d29cc24af74a3
+restart_input nimbus_config /opt/qsi/config/nimbus.conf 6a32518bd0e5f024a766a8cfb3f722dc4752b952b4ce629ed27fcc8bca4293f5
+restart_input develop_config /opt/qsi/config/develop.conf 970a00795c0464a7e97b44d6b50d5bd9dbe6f851d51c7408b55cd058e3c93664
+restart_input platform_functions /opt/qsi/config/platform_functions 16bcf3ec02fc8a660256bfa37674d6dfd5ef786345d7c2ff624cf1c2b030e136
 echo 'Arguments, private file names, key/log contents and socket peers suppressed.'
 echo 'Observations are racy, not pidfd-protected or exhaustive. Do not reuse these PIDs as stop targets.'
 echo 'No signals, service execution, sync, mount change, watchdog open, raw block access or reboot performed.'

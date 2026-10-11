@@ -9,7 +9,7 @@ SCRIPT=ROOT/'device/handover-identity-preflight.sh'
 
 
 class HandoverIdentityTests(unittest.TestCase):
-    def run_fixture(self, wrong_socket=False, wrong_hash=False, exported=False):
+    def run_fixture(self, wrong_socket=False, wrong_hash=False, exported=False, known_vendor_log=False):
         with tempfile.TemporaryDirectory() as folder:
             base=Path(folder);proc=base/'proc';(proc/'self').mkdir(parents=True);(proc/'net').mkdir()
             (proc/'modules').write_text('g_file_storage 1\n' if exported else '')
@@ -22,6 +22,8 @@ class HandoverIdentityTests(unittest.TestCase):
             (ssh/'boot.pid').write_text('100\n');(stage/'listener.pid').write_text('200\n')
             (ssh/'boot.log').write_text('private boot log content')
             private=base/'secret-customer-filename';private.write_text('private data must not be read')
+            if known_vendor_log:
+                private=base/'nimbus/xml_log.txt';private.write_text('private vendor API log content')
             for pid,label,executable,start in (('100','dropbearmulti-b',binary,'1234'),('200','dropbearmulti-b',binary,'5678'),('300','nimbus',nimbus,'9876')):
                 process=proc/pid;(process/'fd').mkdir(parents=True);(process/'fdinfo').mkdir()
                 (process/'exe').symlink_to(executable);(process/'comm').write_text(label+'\n')
@@ -38,7 +40,7 @@ class HandoverIdentityTests(unittest.TestCase):
             text=text.replace('b2472e7c34c22b2bb7dbda2d58ce8836cedccf5b10680047d60eaf10956220dd',hashlib.sha256(nimbus.read_bytes()).hexdigest())
             text=text.replace("stat -c '%u:%g:%a'","stat -c '0:0:%a'").replace("stat -c '%u:%g'","stat -c '0:0'")
             text=text.replace('root_device=$(stat -c \'%d\' /)','root_device=$(stat -c \'%d\' "'+str(base)+'")')
-            for root in ('/proc/','/sys/','/root/','/tmp/','/nimbus/'):
+            for root in ('/proc/','/sys/','/root/','/tmp/','/nimbus/','/etc/rc.d/','/opt/qsi/'):
                 text=text.replace(root,str(base/root.strip('/'))+'/')
             text=text.replace('in /root ', 'in "'+str(base/'root')+'" ').replace(' /tmp ', ' "'+str(base/'tmp')+'" ')
             path=base/'fixture.sh';path.write_text(text)
@@ -62,6 +64,13 @@ class HandoverIdentityTests(unittest.TestCase):
     def test_wrong_socket_hash_or_export_refuses_without_change(self):
         for kwargs in ({'wrong_socket':True},{'wrong_hash':True},{'exported':True}):
             with self.subTest(kwargs=kwargs):self.assertNotEqual(self.run_fixture(**kwargs).returncode,0)
+
+    def test_vendor_log_classification_without_contents_or_unsafe_restart(self):
+        result=self.run_fixture(known_vendor_log=True)
+        self.assertEqual(result.returncode,0,result.stderr+result.stdout)
+        self.assertIn('pid=300 known_vendor_debug_log_fds=0 known_vendor_api_log_fds=1 known_vendor_settings_db_fds=0 unclassified_root_fds=0',result.stdout)
+        self.assertNotIn('private vendor API log content',result.stdout)
+        self.assertIn('restart_input=nimbus_service status=unavailable_or_unsafe',result.stdout)
 
     def test_shell_syntax(self):
         subprocess.run(['sh','-n',str(SCRIPT)],check=True)
