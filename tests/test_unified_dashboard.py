@@ -196,9 +196,11 @@ class UnifiedTests(unittest.TestCase):
         http=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(web)))
         thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
         try:
-            with tempfile.TemporaryDirectory(dir='/tmp/opencode',prefix='unified-browser-') as profile:
+            profile_root = '/tmp/opencode' if Path('/tmp/opencode').is_dir() else None
+            with tempfile.TemporaryDirectory(dir=profile_root,prefix='unified-browser-') as profile:
+                screenshot = str(Path(profile_root or profile) / 'nimbus-unified-browser.png')
                 result=subprocess.run([shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking',
-                    '--no-first-run','--user-data-dir='+profile,'--window-size=1440,1050','--screenshot=/tmp/opencode/nimbus-unified-browser.png','--virtual-time-budget=9000','--dump-dom',f'http://127.0.0.1:{http.server_port}/'],capture_output=True,text=True,timeout=40)
+                    '--no-first-run','--user-data-dir='+profile,'--window-size=1440,1050','--screenshot='+screenshot,'--virtual-time-budget=9000','--dump-dom',f'http://127.0.0.1:{http.server_port}/'],capture_output=True,text=True,timeout=40)
                 self.assertEqual(result.returncode,0,result.stderr[-2000:])
                 self.assertIn('data-unified-test="passed"',result.stdout)
                 for body in Quiet.writes:

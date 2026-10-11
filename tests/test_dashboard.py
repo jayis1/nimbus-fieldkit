@@ -162,7 +162,8 @@ class DashboardTests(unittest.TestCase):
         http=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(QuietHandler,directory=str(self.install)))
         thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
         try:
-            with tempfile.TemporaryDirectory(dir='/tmp/opencode',prefix='nimbus-browser-') as profile:
+            profile_root = '/tmp/opencode' if Path('/tmp/opencode').is_dir() else None
+            with tempfile.TemporaryDirectory(dir=profile_root,prefix='nimbus-browser-') as profile:
                 result=subprocess.run([shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
                     '--disable-background-networking','--disable-component-update','--no-first-run','--no-default-browser-check',
                     '--user-data-dir='+profile,'--virtual-time-budget=5000','--dump-dom',
