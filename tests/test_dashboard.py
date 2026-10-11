@@ -125,7 +125,7 @@ class DashboardTests(unittest.TestCase):
     def test_shell_syntax(self):
         subprocess.run(['sh','-n',str(self.install/'nimbus-dashboard.sh')],check=True)
 
-    @unittest.skipUnless(shutil.which('chromium'), 'Chromium is unavailable')
+    @unittest.skipUnless(shutil.which('google-chrome') or shutil.which('chromium'), 'Chrome/Chromium is unavailable')
     def test_browser_dark_mode_features_commands_and_no_browser_writes(self):
         self.setting('network_health','on'); self.setting('watchdog','on')
         self.dashboard('snapshot')
@@ -164,7 +164,7 @@ class DashboardTests(unittest.TestCase):
         try:
             profile_root = '/tmp/opencode' if Path('/tmp/opencode').is_dir() else None
             with tempfile.TemporaryDirectory(dir=profile_root,prefix='nimbus-browser-') as profile:
-                result=subprocess.run([shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
+                result=subprocess.run([shutil.which('google-chrome') or shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
                     '--disable-background-networking','--disable-component-update','--no-first-run','--no-default-browser-check',
                     '--user-data-dir='+profile,'--virtual-time-budget=5000','--dump-dom',
                     f'http://127.0.0.1:{http.server_port}/dashboard/index.html'],capture_output=True,text=True,timeout=35)

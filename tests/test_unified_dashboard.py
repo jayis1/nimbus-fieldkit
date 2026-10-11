@@ -88,7 +88,7 @@ class UnifiedTests(unittest.TestCase):
         path=self.root/'upgrade.sh';path.write_text(script)
         subprocess.run(['sh','-n',str(path)],check=True)
 
-    @unittest.skipUnless(shutil.which('chromium'), 'Chromium unavailable')
+    @unittest.skipUnless(shutil.which('google-chrome') or shutil.which('chromium'), 'Chrome/Chromium unavailable')
     def test_browser_same_page_navigation_theme_and_commands(self):
         # Serve the exact stock assets locally, never proxy requests to the drive.
         browser_files = self.files
@@ -199,7 +199,7 @@ class UnifiedTests(unittest.TestCase):
             profile_root = '/tmp/opencode' if Path('/tmp/opencode').is_dir() else None
             with tempfile.TemporaryDirectory(dir=profile_root,prefix='unified-browser-') as profile:
                 screenshot = str(Path(profile_root or profile) / 'nimbus-unified-browser.png')
-                result=subprocess.run([shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking',
+                result=subprocess.run([shutil.which('google-chrome') or shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking',
                     '--no-first-run','--user-data-dir='+profile,'--window-size=1440,1050','--screenshot='+screenshot,'--virtual-time-budget=9000','--dump-dom',f'http://127.0.0.1:{http.server_port}/'],capture_output=True,text=True,timeout=40)
                 self.assertEqual(result.returncode,0,result.stderr[-2000:])
                 self.assertIn('data-unified-test="passed"',result.stdout)

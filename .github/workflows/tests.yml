@@ -22,7 +22,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Unit tests (hardware and local-image tests may skip)
-        run: python -m unittest discover -s tests -v
+        run: |
+          google-chrome --version
+          python -m unittest discover -s tests -v
       - name: Shell syntax
         run: |
           git ls-files -z '*.sh' | xargs -0 -r -n 1 sh -n
