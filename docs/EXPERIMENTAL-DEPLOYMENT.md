@@ -82,7 +82,11 @@ Offline vendor source review found `SWAP_FILE` defaults to `/opt/qsi/fwpool/swap
 
 The capability helper now additionally maps active swap entries to backing mount sources (without printing swap filenames) and reads `/proc/<pid>/fd` **symlink targets only** to report descriptors naming `/dev/watchdog` or `/dev/watchdog0`. It does not read through those descriptors or open devices. This is a racy, path-based observation, not an alias-complete watchdog activity test. Zero links cannot establish that a nowayout watchdog is inactive. Re-run the same host-streamed command above for this extended evidence; it remains inventory-only. Swap on root would add a freeze deadlock risk; swap on another partition still requires a reviewed resident thaw/IO path and bounded watchdog strategy.
 
-Extended-helper checkpoint: **119 local tests pass**, including fixture watchdog descriptor detection and swap backing-mount mapping without exposing unrelated descriptor targets or swap filenames. Extended physical results remain pending. No device state change or image rebuild occurred.
+Extended-helper checkpoint: **119 local tests passed**, including fixture watchdog descriptor detection and swap backing-mount mapping without exposing unrelated descriptor targets or swap filenames. Extended physical results were pending at that checkpoint. No device state change or image rebuild occurred.
+
+Subsequent extended physical results confirm swap backing `/dev/mmcblk0p3`, size 151712 kB and used 3236 kB; RAM totals and the 4 MiB `/tmp` limit remain unchanged. Zero standard watchdog fd links were observed, not proof of inactivity. USB export was inactive. There is no need to repeat this inventory for the offline source review.
+
+See [consistent-capture source review](CONSISTENT-CAPTURE-REVIEW.md): pinned published vendor kernel code shows that thaw needs the lock held during freeze IO, so an independent thaw timer cannot guarantee escape from a blocked freeze. The proposed timed freeze-over-SSH approach is not accepted as a bounded safe capture method. A temporary **non-forced read-only root remount** remains a review lead with explicit service/restore/failure gates; no such trial or helper has been executed or approved by this document.
 
 ### 3. Review the complete deployment path
 

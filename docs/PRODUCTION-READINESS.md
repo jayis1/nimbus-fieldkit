@@ -20,7 +20,7 @@ The user has accepted using the existing drive for a staged experimental trial d
 | Live SSH/Telnet/WPA2 transition | User verified on installed device | Separate from candidate-image boot/provisioning |
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
 | Image boot and vendor behavior | BLOCKED | Native boot, charging, battery, media, AP/uplink, USB transitions and restart behavior |
-| Recovery/restoration | Installed rescue located offline; fresh rootfs capture inconsistent; restore BLOCKED | Matching verified rescue route and successful restore; raw-backup checksums alone are insufficient; see [backup review](EXPERIMENTAL-DEPLOYMENT.md#physical-backup-review--2026-10-11) |
+| Recovery/restoration | Installed rescue located offline; fresh rootfs capture inconsistent; restore BLOCKED | Matching verified rescue route and successful restore; raw-backup checksums alone are insufficient; see [backup review](EXPERIMENTAL-DEPLOYMENT.md#physical-backup-review--2026-10-11) and [capture constraints](CONSISTENT-CAPTURE-REVIEW.md) |
 | SD writes | Live writes, reboot/readback and both normal/writable-SD USB cycles PASSED; image policy pending | Boot/USB return restores SD ro; safe candidate mount policy and native-image validation remain unverified; see SD validation evidence |
 | GameHack downstream pairing | BLOCKED | wlan0 policy plus pinned fresh handheld pairing/transfer; no global management exposure |
 | Legacy services/accounts | BLOCKED | HTTP/FTP dependency and privacy review, account/reset behavior, logs and access restrictions |
