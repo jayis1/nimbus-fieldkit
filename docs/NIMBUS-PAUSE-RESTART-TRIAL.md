@@ -1,0 +1,31 @@
+# Vendor-only Nimbus pause/restart trial — no remount or flash
+
+The user explicitly approved briefly interrupting the vendor dashboard/API to test Nimbus process exit/restart, while leaving both SSH listeners running and root writable. That approval does not cover SSH retirement, root read-only remount/freeze, capture, repair, bootloader/environment changes, reboot, formatting or firmware writes. No native trial result has been returned yet.
+
+## Exact scope and guards
+
+`device/nimbus-pause-restart-trial.sh` has default `--check`, explicit `--start`, and an internal detached `--worker`. Reviewed source-only package: `build/nimbus-pause-restart-trial-v1.tar`, SHA-256 **`8667ea04f064919b49f537504fd1ce219cd8a737b65855a2807577747aee470e`**. `scripts/package-pause-restart-trial.py` packages only the first-party trial, first-party read-only identity helper and checksums. It contains no vendor executable/script copy, keys, credentials or backups.
+
+Fresh private tmpfs stage: `/tmp/nimbus-pause-restart-v1`, root:root 0700, private files via umask 077. Existing stage, started marker or log refuses reuse; do not rerun blindly or remove retained evidence. Upload transport must verify whole archive before extraction. The trial checks stage/source integrity; non-symlink required directories; expected ext3 root identity and **rw** state; writable tmpfs `/tmp`; inactive USB export; detected external power; exact vendor executable/service/configuration hashes.
+
+Check-only sources the checksum-verified first-party metadata inventory, not vendor code, to freshly verify old/replacement listener process identity and socket ownership and unique vendor executable/start identity. It requires no vendor children, exactly one writable root descriptor to the known settings database, no shared writable root mapping, expected communication-socket path type, and ownership of the expected single IPv4 HTTP listener on port 80. Any mismatch stops. PID/start checks are racy, not pidfd-protected; no atomic PID-reuse immunity is claimed on this legacy kernel.
+
+The start action launches a worker with `nohup setsid`, stdin detached and private tmpfs log output. The worker rechecks before action, requests **one TERM signal** only for the freshly verified vendor process, and observes exit for up to ten polling intervals. This normal termination request does not prove application-level SQLite flushing or a clean database transaction boundary. Never use SIGKILL, blanket name-based termination, descriptor manipulation or force to overcome refusal. If the daemon remains, no duplicate restart is launched. Autonomous respawn is a failed quiescence result, not a reason to repeatedly kill it.
+
+After an observed exit and brief pause, restart is requested **once** using the hash-matched vendor service's `start` action. The stock unbounded stop/reload loops are never invoked. The reviewed start action removes its known communication socket and launches the existing executable with its vendor options; the trial rejects a symlink or unexpected regular file at that socket path. Startup stdout/stderr are discarded, not directed to root logs or exposed publicly. It observes the matching vendor executable and HTTP socket, then confirms root remains rw and original SSH identities/listening sockets are retained.
+
+An EXIT/signal trap performs best-effort recovery after a termination request; it does not launch a duplicate or repeat an already-requested restart. Worker launch is detached from the PC connection to improve SSH-loss handling, not guarantee recovery. Kernel IO stalls, power loss, a killed worker or service failure can still prevent completion. Polling counts and the launcher's 30-interval wait are **not hard kernel-operation deadlines**. A failed/unfinished worker retains its stage/log and requires review through existing SSH. Do not reboot, remount, rerun the trial or start another daemon blindly.
+
+`RESULT=PASS` only means this process/socket/state observation passed. It is not proof of settings-database correctness, browser/API health, charging/network stability, filesystem durability, backup consistency, recovery after failed boot or firmware readiness. `FAIL` or missing result is not an invitation to bypass guards. Public release/redistribution gates remain unchanged.
+
+## Validation
+
+**162 tests run, 160 pass, 2 Node-dependent skips**, with the previously documented host-only fixture sync isolation. New fixtures use synthetic process metadata and a mocked signal function that moves only fixture records; they never signal host/device processes or execute vendor code. They cover default check-only no-action, one targeted TERM/one restart on success, detached worker completion, error-after-stop recovery trap, stop refusal without force/duplicate start, restart failure without retry/false success, bad input/read-only-root refusal before signaling, shell syntax and source-package/no-overwrite scope. Fixtures preserve synthetic database bytes and both listener records. Native behavior remains untested until the user runs the separately approved procedure.
+
+## Supervised execution conditions
+
+Use a PC terminal, not the drive prompt. Keep an independent, freshly working pinned port-2225 shell open; its idle timeout may close it, so verify it still responds before the trial. Stop uploads, music playback and other media/settings writes; keep USB data disconnected and stable external power connected. The trial does not provide charging-independent recovery hardware.
+
+Stream and verify the exact archive into fresh private tmpfs staging. Run `sh "$stage/trial.sh" --check` first; only on success run `--start`. Return the final result and private worker's first 80 lines (only reviewed metadata/status; no key/database contents). Keep all staging intact on failure. Never learn/bypass a changed host key.
+
+After a returned PASS, refresh the original homepage and check non-destructive navigation and authenticated Settings access; confirm both management paths independently. Do not invoke format/reset/update actions. Then rerun the root-writer scan to confirm the expected restarted database holder and untouched listeners. A successful trial can inform a separately reviewed capture/SSH-handover plan; it does not authorize that next state change automatically.

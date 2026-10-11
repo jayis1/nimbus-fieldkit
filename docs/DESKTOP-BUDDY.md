@@ -21,3 +21,7 @@ Separate fresh root-owned 0700 private staging `/root/nimbus-mascot-r1`; verifie
 Full-suite host runs initially blocked in installer fixture `sync` calls, which flush unrelated host workloads. The successful full suite used a host-only PATH shim for fixture sync; production/device installers retain real sync. These fixtures do not certify device durability. No unrelated host data was deleted.
 
 Future unified/image builds include `mascot.js` after the bridge and record its source hash. Fresh **beta2** generic/private images now include it; beta1 and all earlier image artifacts remain unchanged. See [beta test plan](BETA1-TEST-PLAN.md). No firmware boot, flash, recovery boot or service handover occurred.
+
+## Live installation
+
+The user returned a successful guarded installer transcript: whole archive/member checks, original homepage/backup checks and patched homepage checks passed. Independent read-only HTTP verification confirmed the exact new homepage and mascot script hashes above and the unchanged icon/bottom-card stylesheet `3f79ca2d9923e06615bde777fb71d2f8aa73bd05de1e1e9aeb464fb8149a6886`. Nib is installed and served; real Firefox visual/pointer behavior remains pending user confirmation. No service was stopped, root remounted or firmware flashed. Keep private rollback material; later homepage installers must guard the new homepage hash.
