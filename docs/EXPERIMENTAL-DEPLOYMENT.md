@@ -4,7 +4,9 @@ The user has elected to use the existing drive as the experimental device, accep
 
 This document contains no deployment command, updater invocation, bootloader flag write or partition-write instruction. No experimental flash has been performed.
 
-Preparation checkpoint: **109 local tests pass**, including read-only preflight fixtures, USB-export refusal and mismatched partition-boundary refusal. The preflight script has not yet been run on the physical drive; fixture results are not hardware evidence. The previously built v4 image artifacts are unchanged by this host-streamed diagnostic addition.
+Initial preparation checkpoint: **109 local tests passed**, including read-only preflight fixtures, USB-export refusal and mismatched partition-boundary refusal. At that checkpoint the script had not been run on the physical drive; fixture results are not hardware evidence. The previously built v4 image artifacts are unchanged by these host-streamed diagnostic/backup additions.
+
+Subsequent user-supplied physical preflight passed with zero inventory failures: kernel `2.6.35.3-899-g9b1a262`, architecture `armv7l`, all four reviewed partition boundaries and 122142720 whole-disk sectors. Root was `/dev/root` mounted ext3 rw with writeback/barrier=0; USB export was inactive and vendor services were present. External power was 0, battery status Discharging, voltage 4113872 microvolts. Voltage alone is not a trustworthy battery-percent or stable-power certification; trial power remains unresolved. No block writes were performed by this preflight.
 
 ## Staged trial
 
@@ -29,6 +31,20 @@ Run from the SanDisk project on the PC, not the drive's root prompt. The key pas
 Keep both earlier verified backup sets. They predate important live SSH/UI/network changes and must not be mistaken for a current rollback state. Before any write, collect a separately named current boot area, settings, rootfs, firmware pool, calibration and web backup through a private authenticated route, verify byte sizes/SHA-256 off-device, and inspect filesystem consistency offline.
 
 Rootfs/settings backups can contain private keys and credentials. Do not put new backups in publicly served storage or attach them to GitHub. Do not overwrite the existing backup sets. Live raw reads are not quiesced recovery images; consistency limits must remain explicit.
+
+The host-only helper `scripts/backup-pretrial.py` streams seven artifacts over a single strictly pinned, key-authenticated SSH connection to a fresh ignored `.private-backups/nimbus-pretrial-<UTC timestamp>/` directory. It hashes the exact remote bytes mirrored to SSH, checks the same hash while receiving, and re-reads/fsyncs the private host file. It never stages credentials-bearing data on HTTP/FTP media, runs firmware helpers, changes mounts or writes source partitions.
+
+The backup commands perform reads, but the running OS can still update access times/logs and unrelated services can write during capture. This is why same-stream integrity does not certify a quiesced or mutually consistent partition set.
+
+```sh
+python3 scripts/backup-pretrial.py --host 172.16.10.178
+```
+
+Run this from the PC's SanDisk project directory while USB data remains disconnected and uploads/settings/media writes are stopped. Enter the SSH key passphrase locally if requested. Defaults use the existing dedicated `~/.ssh/nimbus-admin-ed25519` identity and `~/.ssh/nimbus-test-known-hosts`; no password fallback or host-check bypass is allowed. At least 1 GiB free PC storage is required. The overall transfer has a 30-minute bound; incomplete files/staging are retained for private inspection, not overwritten or silently resumed.
+
+Artifacts are `boot-area.bin`, `settings.bin`, `rootfs.bin`, `fwpool.bin`, `wl1271-nvs.bin`, `stock-web.tar`, and `partitions.txt`, plus private transfer log/checksums/manifest. The first four include 475 MiB of raw system regions; user media and the rest of the disk are not a full-disk backup. Stream frame/size/hash mismatches stop the transfer. A complete manifest explicitly retains `filesystem_consistency_verified: false`, `restore_tested: false` and `flash_authorized: false` until independent offline/recovery checks establish otherwise. New physical backup results are still pending.
+
+Backup-helper checkpoint: **115 local tests pass**, including the complete seven-artifact shell protocol on small regular-file fixtures, binary framing/hash/truncation checks, private file modes and refusal to overwrite earlier backups. These fixtures never read hardware. The helper has not yet transferred the physical drive's new backup set.
 
 ### 3. Review the complete deployment path
 
