@@ -68,4 +68,35 @@ Unlike a successful freeze, a successful read-only remount makes subsequent root
 6. Review failure handling for SSH loss, capture failure, failed rw restoration and service recovery. A host-side timeout is not an independently guaranteed device restoration mechanism. No absolute kernel-operation deadline should be promised.
 7. Keep the original inconsistent backup and derived journal-review copy unchanged. A new capture receives a new private destination and manifest. No replacement or repair of existing backups.
 
+## Service/management review and next evidence
+
+The hash-pinned stock 3.04 rootfs archive (`4dd2907ec920443855b221b1f67c5086e369b84861fb0a486d74da2c7671b203`) was inspected as data only. The live copies of these scripts are not yet hash-matched:
+
+| Script under `/etc/rc.d/init.d/` | Stock SHA-256 | Observed stop/reload behavior |
+| --- | --- | --- |
+| `nimbus-service` | `14575fc3734fafc823b5b6440fb04e42e8cdc51478b840a7f5ac1a525610db3b` | `stop` is empty; not a service quiesce operation |
+| `service/S00eventmanager` | `99347d094b3c4150815ffe8b2dc80ec61f8a88befa3c17fbe1da158bff5c9001` | Sends a signal to name-matched PIDs; does not wait for exit or certify closure of files |
+| `service/S15fwserver` | `225d9f386a3562a55a56a9133a289743105be0083bff719ae8d3b72107d2ed1c` | Stop signals name-matched PIDs without exit verification; reload contains an unbounded process-presence loop |
+| `service/S20nimbus` | `2dc2ed86ca1936b41e7183f425dcd6794ceed52c8139b852564d29cc24af74a3` | Stop/reload contain unbounded process-presence loops; use broad process-list matching |
+
+Crash helpers invoke service reload asynchronously. Opaque native daemons' exit/restart/charging behavior is not established by shell-source inspection. Never use `fw_upgrade.sh` as a convenient quiesce helper: it changes bootloader state, tears down storage/swap and reboots.
+
+The live SSH startup integration described in `SSH-STARTUP-CANDIDATE.md` redirects the foreground server's stdout/stderr to `/root/nimbus-ssh-test/boot.log`. A writable rootfs log descriptor held by SSH or its descendants can prevent a non-forced ro remount. Do not kill the working management server to release it without an independently tested replacement session. A temporary same-key/same-host-identity listener restricted to `wlan1`, with private tmpfs logging and a separately reviewed port, is a potential handover design—not a deployed listener or a reason to bypass existing pinning. All relevant old server/session descriptors would need to be accounted for; closing only a terminal window is insufficient evidence.
+
+`device/root-writer-preflight.sh` is **read-only metadata inventory**, not a remount trial. It checks expected root major/minor through mountinfo/sysfs and USB state, then counts writable regular-file fd flags and shared writable mappings on root. It outputs numeric PIDs, whitelisted process labels, counts and hashes of the four selected service scripts. Arbitrary process names, file/mapping paths, addresses, arguments and file contents are not printed. It uses stat on fd targets for metadata, never opens those targets for data or executes service scripts. Unknown process labels are `other`; process races/missing fdinfo are reported. This does not enumerate every VFS reference capable of blocking a remount (for example a retained writable file reference behind a now-read-only mapping).
+
+Run the new targeted check from a trusted PC terminal:
+
+```sh
+ssh -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
+  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
+  -p 2224 root@172.16.10.178 'sh -s' \
+  < device/root-writer-preflight.sh
+```
+
+Do not run this shell script from an untrusted modified file. It performs no signal, service stop, sync, mount change, watchdog open, firmware helper or reboot. Physical writer counts/service hashes remain pending. Fixture tests exercise octal read/write fd flags, shared writable root mappings, missing metadata, USB/root-identity refusal and unchanged local files without exposing fixture private names.
+
+Checkpoint: **123 local tests pass**. No physical writer inventory, management handover or remount has yet been performed. v4 image artifacts are unchanged.
+
 No remount trial helper is shipped by this review. Current images remain non-flash-certified, and installed rescue still automatically invokes its updater. Source review narrows the next experiment; it does not establish recoverability or authorize firmware writes.
