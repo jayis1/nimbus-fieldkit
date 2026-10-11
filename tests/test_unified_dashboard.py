@@ -132,8 +132,30 @@ class UnifiedTests(unittest.TestCase):
             const checks=[];
             checks.push(!document.body.textContent.includes('Please install Adobe'));
             checks.push(!document.body.textContent.includes('Your browser needs Flash'));
+            // Exercise the real vendor busy/cancel lifecycle without sending an upload.
+            const busy=document.getElementById('div-short-block-msg');
+            checks.push(getComputedStyle(busy).display==='none');
+            let cancelled=0;
+            t4u.elementBlockUI('Uploading',()=>cancelled++);
+            await new Promise(resolve=>setTimeout(resolve,100));
+            checks.push(getComputedStyle(busy).display!=='none');
+            checks.push(getComputedStyle(busy.querySelector('.loading')).display==='none');
+            checks.push(getComputedStyle(busy,'::before').animationName===(matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'nimbus-upload-spin'));
+            checks.push(getComputedStyle(busy).borderRadius==='16px');
+            const busyRect=busy.getBoundingClientRect();
+            checks.push(busyRect.left>=0 && busyRect.right<=innerWidth);
+            checks.push(getComputedStyle(document.getElementById('btnMessageCancel2')).height==='34px');
+            document.getElementById('btnMessageCancel2').click();
+            await new Promise(resolve=>setTimeout(resolve,500));
+            checks.push(cancelled===1 && getComputedStyle(busy).display==='none');
             document.getElementById('nimbus-global-theme').click();
             checks.push(document.documentElement.dataset.theme==='light');
+            t4u.elementBlockUI('Uploading');
+            await new Promise(resolve=>setTimeout(resolve,100));
+            checks.push(getComputedStyle(busy,'::before').borderTopColor==='rgb(8, 121, 108)');
+            t4u.elementUnblockUI();
+            await new Promise(resolve=>setTimeout(resolve,500));
+            checks.push(getComputedStyle(busy).display==='none');
             document.getElementById('nimbus-global-theme').click();
             document.getElementById('nimbus-quick-jump').click();
             const palette=document.getElementById('nimbus-jump-dialog');
@@ -243,10 +265,14 @@ class UnifiedTests(unittest.TestCase):
             profile_root = os.environ.get('NIMBUS_BROWSER_TMPDIR') or ('/tmp/opencode' if Path('/tmp/opencode').is_dir() else None)
             with tempfile.TemporaryDirectory(dir=profile_root,prefix='unified-browser-') as profile:
                 screenshot = str(Path(profile_root or profile) / 'nimbus-unified-browser.png')
-                result=subprocess.run([shutil.which('google-chrome') or shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking','--autoplay-policy=no-user-gesture-required',
-                    '--no-first-run','--user-data-dir='+profile,'--window-size=1440,1050','--screenshot='+screenshot,'--virtual-time-budget=9000','--dump-dom',f'http://127.0.0.1:{http.server_port}/'],capture_output=True,text=True,timeout=40)
+                command=[shutil.which('google-chrome') or shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking','--autoplay-policy=no-user-gesture-required',
+                    '--no-first-run','--user-data-dir='+profile,'--window-size=1440,1050','--screenshot='+screenshot,'--virtual-time-budget=9000','--dump-dom',f'http://127.0.0.1:{http.server_port}/']
+                result=subprocess.run(command,capture_output=True,text=True,timeout=40)
                 self.assertEqual(result.returncode,0,result.stderr[-2000:])
                 self.assertIn('data-unified-test="passed"',result.stdout)
+                reduced=subprocess.run(command+['--force-prefers-reduced-motion','--window-size=390,844'],capture_output=True,text=True,timeout=40)
+                self.assertEqual(reduced.returncode,0,reduced.stderr[-2000:])
+                self.assertIn('data-unified-test="passed"',reduced.stdout)
                 for body in Quiet.writes:
                     self.assertNotRegex(body.decode(errors='replace'),r'(?i)formatNimbus|resetNimbus|upgradeFirmware|setSSID|settings set')
         finally:

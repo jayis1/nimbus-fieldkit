@@ -49,3 +49,15 @@ body.nimbus-toolkit-open #bottonList>*{visibility:hidden}
 #nimbus-jump-dialog input{width:calc(100% - 24px);padding:12px;margin:0 0 14px;font:14px system-ui}
 .nimbus-jump-results{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
 @media(max-width:600px){.nimbus-jump-results{grid-template-columns:1fr}}
+/* Upload/busy card: keep the vendor title, cancellation and hidden-state logic. */
+#div-short-block-msg{box-sizing:border-box;width:100%;min-height:100px;height:auto!important;padding:18px 18px 18px 74px;background:var(--nk-panel)!important;background-image:none!important;color:var(--nk-text)!important;border:1px solid var(--nk-line);border-radius:16px;box-shadow:0 16px 48px #0004;text-align:left;position:relative}
+#div-short-block-msg>.loading{display:none!important}
+#div-short-block-msg::before{content:"";position:absolute;left:22px;top:24px;width:30px;height:30px;box-sizing:border-box;border:3px solid var(--nk-line);border-top-color:var(--nk-accent);border-right-color:var(--nk-accent);border-radius:50%;animation:nimbus-upload-spin .9s linear infinite}
+#div-short-block-msg #hTitle2{padding:0!important;margin:0 0 12px!important;height:auto!important;border:0!important;color:var(--nk-text)!important;font:600 15px/1.5 system-ui!important;overflow-wrap:anywhere}
+#div-short-block-msg #btnMessageCancel2{float:none!important;margin:0!important;min-width:96px;height:34px!important;padding:6px 16px;border:1px solid var(--nk-line)!important;border-radius:8px!important;background:var(--nk-high)!important;color:var(--nk-text)!important;font:500 13px/1.4 system-ui!important;transition:background .15s,border-color .15s}
+#div-short-block-msg #btnMessageCancel2:hover{border-color:var(--nk-accent)!important}
+#div-short-block-msg #btnMessageCancel2:focus-visible{outline:2px solid var(--nk-accent);outline-offset:3px}
+.blockUI.blockMsg:has(#div-short-block-msg){position:fixed!important;top:20px!important;right:20px!important;left:auto!important;width:min(360px,calc(100vw - 32px))!important;padding:0!important;background:transparent!important;border:0!important;border-radius:16px!important;overflow:visible!important}
+@keyframes nimbus-upload-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#div-short-block-msg::before{animation:none}#div-short-block-msg #btnMessageCancel2{transition:none}}
+@media(max-width:480px){.blockUI.blockMsg:has(#div-short-block-msg){top:12px!important;right:12px!important;width:calc(100vw - 24px)!important}}
