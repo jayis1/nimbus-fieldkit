@@ -35,3 +35,30 @@ Suite checkpoint: **134 tests run, 132 pass, 2 Node-dependent tests skipped** be
 Host `/tmp` is full. Browser tests used a disk-backed scratch directory and explicit `NIMBUS_BROWSER_TMPDIR`; no unrelated retained files were deleted. Some older shell fixtures assume scratch paths have no spaces, so the full suite used `/home/jais/.cache/nimbus-offline-tests` rather than the space-containing project path.
 
 No physical UI install, candidate image boot, remount, repair or flash has occurred for this change.
+
+## Guarded user-run UI installation
+
+The temporary port-2225 connection has now passed a fresh existing-pin root login and writer inventory without observed writable root fds from the replacement listener/session. Both old management and vendor services remain running. This permits the separate requested UI patch to use that authenticated connection; it does not authorize the still-unreviewed root remount/handover.
+
+Stream the exact local package directly to a **fresh private root stage**, verify its whole-archive hash on the drive **before extraction**, then run its guarded UI-only installer:
+
+```sh
+ssh -T -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
+  -o HostKeyAlias='[172.16.10.178]:2224' \
+  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
+  -p 2225 root@172.16.10.178 '
+set -eu
+umask 077
+stage=/root/nimbus-audio-html5-r1
+[ "$(id -u)" = 0 ]
+[ ! -e "$stage" ] && [ ! -L "$stage" ]
+mkdir -m 700 "$stage"
+cat > "$stage/package.tar"
+printf "%s  %s\n" 9bc06350b3d54520b0f688100487c1737eea48c17325eef8c5511721b0fe9633 "$stage/package.tar" | sha256sum -c -
+tar -xf "$stage/package.tar" -C "$stage"
+sh "$stage/install.sh" install
+' < '/home/jais/Projects/sandisk wifi dims/build/nimbus-audio-html5-ui-r1.tar'
+```
+
+This writes private root staging and the guarded homepage/audio UI assets on the live rootfs; it performs **no flashing, raw partition writes, service actions or mount changes**. Never bypass an archive/baseline hash refusal or rerun into a partial stage. No SFTP, HTTP media staging or host-key learning is involved. Preserve the existing Settings patch and keep both SSH listeners running. After successful installation, hard-refresh the original homepage and test an ordinary supported track; report playback/error behavior without posting credentials or private media. Independent served-asset verification and physical music playback remain pending.
