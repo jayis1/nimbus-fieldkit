@@ -21,6 +21,14 @@ class MascotUITests(unittest.TestCase):
         self.assertIn('removeEventListener',source)
         self.assertIn('prefers-reduced-motion',source)
 
+    def test_geometry_is_cached_and_uploads_do_not_hide_buddy(self):
+        source=(ROOT/'device/unified/mascot.js').read_text()
+        self.assertIn('if (layoutDirty)',source)
+        self.assertIn('window.visualViewport?.',source)
+        self.assertNotIn('data-busy',source)
+        self.assertNotIn("header?.querySelector",source)
+        self.assertNotIn('subtree:true',source)
+
     def test_guarded_install_and_rollback_keeps_later_homepage(self):
         with tempfile.TemporaryDirectory() as folder:
             base=Path(folder);stage=base/'stage';stage.mkdir(mode=0o700)

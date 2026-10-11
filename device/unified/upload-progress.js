@@ -35,8 +35,12 @@
       meter.setAttribute('aria-label', 'Upload bytes sent');
       panel.append(label, meter); card.insertBefore(panel, document.getElementById('btnMessageCancel2'));
     }
-    panel.hidden = false; label.textContent = message;
-    if (percent === null) meter.removeAttribute('value'); else meter.value = percent;
+    if (panel.hidden) panel.hidden = false;
+    if (label.textContent !== message) label.textContent = message;
+    // Repeated byte events in the same integer percentage need no DOM writes.
+    if (percent === null) {
+      if (meter.hasAttribute('value')) meter.removeAttribute('value');
+    } else if (!meter.hasAttribute('value') || meter.value !== percent) meter.value = percent;
   };
   const hide = () => {if (panel) panel.hidden = true;};
   Upload.prototype.submit = function() {

@@ -45,12 +45,15 @@
     const actions = [...document.querySelectorAll('.authority .lblBtn[id], .authority .setting-check-firmware-upgrade')];
     const updateAccess = () => {
       const locked = window.t4u?.SS?.isLogin ? !window.t4u.SS.isLogin() : true;
-      status.textContent = locked ? 'Protected controls require the device web-admin password. SSH login does not sign you in here. Enter the password and select Sign in.' : 'Web-admin controls unlocked. Wi-Fi changes can disconnect clients; reset and format are destructive.';
+       const message = locked ? 'Protected controls require the device web-admin password. SSH login does not sign you in here. Enter the password and select Sign in.' : 'Web-admin controls unlocked. Wi-Fi changes can disconnect clients; reset and format are destructive.';
+       if (status.textContent !== message) status.textContent = message;
       if (signIn.disabled !== password.disabled) signIn.disabled = password.disabled;
       for (const action of actions) {
         const disabled = locked || !!action.closest('.authority.disable');
-        action.setAttribute('role', 'button'); action.setAttribute('aria-disabled', String(disabled));
-        action.tabIndex = disabled ? -1 : 0;
+         if (action.getAttribute('role') !== 'button') action.setAttribute('role', 'button');
+         if (action.getAttribute('aria-disabled') !== String(disabled)) action.setAttribute('aria-disabled', String(disabled));
+         const tabIndex = disabled ? -1 : 0;
+         if (action.tabIndex !== tabIndex) action.tabIndex = tabIndex;
       }
     };
     for (const action of actions) action.addEventListener('keydown', event => {

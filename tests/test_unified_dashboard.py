@@ -135,6 +135,9 @@ class UnifiedTests(unittest.TestCase):
             const buddy=document.getElementById('nimbus-mascot');
             checks.push(!!buddy && buddy.getBoundingClientRect().left===16);
             checks.push(buddy.shadowRoot.querySelectorAll('.pupil').length===2);
+            let gazeLayoutReads=0;
+            const originalBuddyRect=buddy.getBoundingClientRect.bind(buddy);
+            buddy.getBoundingClientRect=()=>{gazeLayoutReads++;return originalBuddyRect();};
             document.dispatchEvent(new PointerEvent('pointermove',{pointerType:'mouse',clientX:innerWidth,clientY:0}));
             await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
             const gaze=buddy.shadowRoot.querySelector('.pupil').getAttribute('transform');
@@ -143,6 +146,15 @@ class UnifiedTests(unittest.TestCase):
             document.documentElement.dispatchEvent(new PointerEvent('pointerleave',{pointerType:'mouse'}));
             await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
             checks.push(buddy.shadowRoot.querySelector('.pupil').getAttribute('transform')==='translate(0.00 0.00)');
+            for(let i=0;i<12;i++) {
+              document.dispatchEvent(new PointerEvent('pointermove',{pointerType:'mouse',clientX:200+i*10,clientY:100}));
+              await new Promise(resolve=>requestAnimationFrame(resolve));
+            }
+            document.body.dataset.gazeLayoutReads=String(gazeLayoutReads);
+            // Stock startup may still mutate the music-bar layout. Pointer-only
+            // frames must nevertheless avoid measuring geometry every frame.
+            checks.push(gazeLayoutReads<12);
+            buddy.getBoundingClientRect=originalBuddyRect;
             const fieldkit=document.getElementById('btnNimbusFieldKit');
             const icon=getComputedStyle(fieldkit,'::before');
             checks.push(icon.width==='24px' && icon.height==='24px' && icon.maskImage.includes('data:image/svg+xml'));
@@ -157,7 +169,7 @@ class UnifiedTests(unittest.TestCase):
             t4u.elementBlockUI('Uploading',()=>cancelled++);
             await new Promise(resolve=>setTimeout(resolve,100));
             checks.push(getComputedStyle(busy).display!=='none');
-            checks.push(innerWidth>480 || getComputedStyle(buddy).display==='none');
+            checks.push(getComputedStyle(buddy).display!=='none');
             checks.push(getComputedStyle(busy.querySelector('.loading')).display==='none');
             checks.push(getComputedStyle(busy,'::before').animationName===(matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'nimbus-upload-spin'));
             checks.push(getComputedStyle(busy).borderRadius==='16px');
@@ -211,6 +223,11 @@ class UnifiedTests(unittest.TestCase):
             checks.push(request.body.getAll('userfile').length===2);
             request.upload.onprogress({lengthComputable:true,loaded:50,total:100});
             checks.push(document.querySelector('#nimbus-upload-progress p').textContent==='50% sent');
+            const progressMutations=new MutationObserver(()=>{});
+            progressMutations.observe(document.getElementById('nimbus-upload-progress'),{attributes:true,childList:true,characterData:true,subtree:true});
+            for(let i=0;i<30;i++)request.upload.onprogress({lengthComputable:true,loaded:50,total:100});
+            checks.push(progressMutations.takeRecords().length===0);
+            progressMutations.disconnect();
             request.upload.onprogress({lengthComputable:false,loaded:60,total:0});
             checks.push(!document.querySelector('#nimbus-upload-progress progress').hasAttribute('value'));
             request.upload.onprogress({lengthComputable:true,loaded:100,total:100});request.upload.onload();

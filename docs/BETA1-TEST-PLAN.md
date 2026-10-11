@@ -2,6 +2,42 @@
 
 ## Delivery status
 
+### Latest beta3 revision
+
+New beta3 offline candidates include the current UI performance sources: cached
+Nib geometry, hidden-document work cancellation, duplicate DOM-write avoidance
+and visible narrow-screen upload controls. Nib remains included. The beta image
+uses its own integrated `fieldkit-v06` assets; it does not copy live trial stages,
+benchmark files, backups or the device's live SSH identity.
+
+| Variant | Local image path | SHA-256 |
+| --- | --- | --- |
+| Generic, no personal SSH keys | `build/nimbus-custom-rootfs-beta3/rootfs.ext3.candidate` | `d49d9d095f452c91297dfbaf4ad7f5cab4fbcc3ce761c51d89c9ee43b859da00` |
+| Private drive-a | `.private-provisioning/drive-a-rootfs-beta3/rootfs.ext3.candidate` | `1d49e41fe4968dfd3ed7a369ad64e2ddc62c6d56b804db7fe9423681db51742d` |
+
+Each is **268435456 bytes (256 MiB)**. Both passed builder checks, independent
+read-only `e2fsck -f -n` (exit 0) and complete-artifact integrity audits. Full
+regression: **204 tests run, 202 pass, 2 skips**. Tests cover beta3 image/archive
+UI provenance, current performance sources, generic/private provisioning scope,
+ownership/modes, exclusion of live trial/benchmark payloads and fail-closed
+flash/boot/recovery flags. Tracked-source hygiene check: 127 files, zero findings
+(not an exhaustive secret audit).
+
+**Local, NOT FLASHABLE, not boot-tested and not publicly redistributed.** Beta1
+and beta2 remain retained unchanged. The private image reuses the previously
+generated offline drive-a provisioning material; it is not a shared tester
+identity and must never be released. The generic image also contains vendor
+components and therefore cannot be a public release asset without licensing
+review. Public beta releases remain first-party source/overlays only; no GitHub
+release was published by the image-build step. See
+[the source-only experimental prerelease](PREBETA-EXPERIMENT.md) for the separate
+public release scope.
+
+The installed UI update and user-reported working transfers are not native beta3
+boot evidence or measured transfer-speed improvements. Recovery, consistent
+capture, safe deployment-container and licensing gates below remain unresolved.
+No device write, firmware flash, reboot or rescue action occurred in this build.
+
 ### Subsequent beta2 revision
 
 The requested [Nib desktop buddy](DESKTOP-BUDDY.md) is now included in newly named **beta2** candidates, without overwriting beta1:

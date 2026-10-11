@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -107,8 +108,10 @@ class CustomImageTests(unittest.TestCase):
                       (ROOT / '.private-provisioning/drive-a-rootfs-candidate-v4', True),
                       (ROOT / 'build/nimbus-custom-rootfs-beta1', False),
                       (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True),
-                      (ROOT / 'build/nimbus-custom-rootfs-beta2', False),
-                      (ROOT / '.private-provisioning/drive-a-rootfs-beta2', True)]
+                       (ROOT / 'build/nimbus-custom-rootfs-beta2', False),
+                       (ROOT / '.private-provisioning/drive-a-rootfs-beta2', True),
+                       (ROOT / 'build/nimbus-custom-rootfs-beta3', False),
+                       (ROOT / '.private-provisioning/drive-a-rootfs-beta3', True)]
         available = [(base, private) for base, private in candidates if base.exists()]
         if not available or not shutil.which('debugfs'):
             self.skipTest('Hardened local candidate/debugfs unavailable')
@@ -138,7 +141,9 @@ class CustomImageTests(unittest.TestCase):
         candidates = [(ROOT / 'build/nimbus-custom-rootfs-beta1', False),
                       (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True),
                       (ROOT / 'build/nimbus-custom-rootfs-beta2', False),
-                      (ROOT / '.private-provisioning/drive-a-rootfs-beta2', True)]
+                       (ROOT / '.private-provisioning/drive-a-rootfs-beta2', True),
+                       (ROOT / 'build/nimbus-custom-rootfs-beta3', False),
+                       (ROOT / '.private-provisioning/drive-a-rootfs-beta3', True)]
         available = [(base, private) for base, private in candidates if base.exists()]
         if not available or not shutil.which('debugfs'):
             self.skipTest('Local beta1 candidates/debugfs unavailable')
@@ -149,15 +154,16 @@ class CustomImageTests(unittest.TestCase):
                     self.assertFalse(manifest[flag])
                 with tarfile.open(base / 'rootfs.tar') as archive:
                     files = ['audio-html5.js', 'upload-progress.js', 'stock-dark.css']
-                    if base.name.endswith('beta2'):
+                    if base.name.endswith(('beta2', 'beta3')):
                         files.append('mascot.js')
                         self.assertIn(b'/data/fieldkit-v06/mascot.js', archive.extractfile('nimbus/data/index.html').read())
                     for filename in files:
                         source = 'device/unified/' + filename
                         name = 'nimbus/data/fieldkit-v06/' + filename
-                        self.assertEqual(manifest['overlay_source_sha256'][source], builder.digest(ROOT / source))
                         data = archive.extractfile(name).read()
-                        self.assertEqual(data, (ROOT / source).read_bytes())
+                        # Retained betas are immutable historical artifacts, not
+                        # rebuilt whenever working-tree UI sources improve.
+                        self.assertEqual(manifest['overlay_source_sha256'][source], hashlib.sha256(data).hexdigest())
                         result = subprocess.run(['debugfs', '-R', 'cat /' + name,
                                                  str(base / 'rootfs.ext3.candidate')], capture_output=True, check=True)
                         self.assertEqual(result.stdout, data)
@@ -174,3 +180,21 @@ class CustomImageTests(unittest.TestCase):
                         for name in keys:
                             member = archive.getmember(name)
                             self.assertEqual((member.uid, member.gid, member.mode), (0, 0, 0o600))
+
+    def test_beta3_performance_sources_and_excluded_live_trial_payloads(self):
+        candidates=[ROOT/'build/nimbus-custom-rootfs-beta3',ROOT/'.private-provisioning/drive-a-rootfs-beta3']
+        available=[base for base in candidates if base.exists()]
+        if not available:self.skipTest('Local beta3 candidates unavailable')
+        for base in available:
+            with self.subTest(variant=base.name),tarfile.open(base/'rootfs.tar') as archive:
+                manifest=json.loads((base/'BUILD-MANIFEST.json').read_text())
+                for name in ('bridge.js','upload-progress.js','mascot.js'):
+                    source='device/unified/'+name
+                    data=(ROOT/source).read_bytes()
+                    self.assertEqual(manifest['overlay_source_sha256'][source],hashlib.sha256(data).hexdigest())
+                    if name=='bridge.js':data=data.replace(b'/data/fieldkit-v05/',b'/data/fieldkit-v06/')
+                    payload=archive.extractfile('nimbus/data/fieldkit-v06/'+name).read()
+                    self.assertEqual(hashlib.sha256(payload).hexdigest(),hashlib.sha256(data).hexdigest())
+                mascot=archive.extractfile('nimbus/data/fieldkit-v06/mascot.js').read()
+                self.assertIn(b'geometryDirty',mascot);self.assertNotIn(b'data-busy',mascot)
+                self.assertFalse(any('nimbus-speed-' in name or 'restoration-trial' in name or 'handover-trial' in name for name in archive.getnames()))
