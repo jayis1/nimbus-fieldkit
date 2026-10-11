@@ -104,7 +104,9 @@ class CustomImageTests(unittest.TestCase):
 
     def test_hardened_generic_and_private_archives_match_images(self):
         candidates = [(ROOT / 'build/nimbus-custom-rootfs-candidate-v4', False),
-                      (ROOT / '.private-provisioning/drive-a-rootfs-candidate-v4', True)]
+                      (ROOT / '.private-provisioning/drive-a-rootfs-candidate-v4', True),
+                      (ROOT / 'build/nimbus-custom-rootfs-beta1', False),
+                      (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True)]
         available = [(base, private) for base, private in candidates if base.exists()]
         if not available or not shutil.which('debugfs'):
             self.skipTest('Hardened local candidate/debugfs unavailable')
@@ -129,3 +131,38 @@ class CustomImageTests(unittest.TestCase):
                                                  str(base / 'rootfs.ext3.candidate')], capture_output=True, check=True)
                         # Never print private bytes in assertion failure diagnostics.
                         self.assertTrue(result.stdout == archive.extractfile(name).read(), 'Image/archive mismatch: ' + name)
+
+    def test_beta1_latest_ui_provenance_and_fail_closed_gates(self):
+        candidates = [(ROOT / 'build/nimbus-custom-rootfs-beta1', False),
+                      (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True)]
+        available = [(base, private) for base, private in candidates if base.exists()]
+        if not available or not shutil.which('debugfs'):
+            self.skipTest('Local beta1 candidates/debugfs unavailable')
+        for base, private in available:
+            with self.subTest(private=private):
+                manifest = json.loads((base / 'BUILD-MANIFEST.json').read_text())
+                for flag in ('flash_ready', 'boot_tested', 'recovery_tested', 'vendor_update_container'):
+                    self.assertFalse(manifest[flag])
+                with tarfile.open(base / 'rootfs.tar') as archive:
+                    for filename in ('audio-html5.js', 'upload-progress.js', 'stock-dark.css'):
+                        source = 'device/unified/' + filename
+                        name = 'nimbus/data/fieldkit-v06/' + filename
+                        self.assertEqual(manifest['overlay_source_sha256'][source], builder.digest(ROOT / source))
+                        data = archive.extractfile(name).read()
+                        self.assertEqual(data, (ROOT / source).read_bytes())
+                        result = subprocess.run(['debugfs', '-R', 'cat /' + name,
+                                                 str(base / 'rootfs.ext3.candidate')], capture_output=True, check=True)
+                        self.assertEqual(result.stdout, data)
+                    page = archive.extractfile('nimbus/data/index.html').read()
+                    self.assertIn(b'/data/fieldkit-v06/upload-progress.js', page)
+                    controller = archive.extractfile('nimbus/data/js/t4u.controller.js').read()
+                    self.assertNotIn(b'FlashDetect.versionAtLeast(10)', controller)
+                    keys = {'etc/nimbus/host-ed25519', 'etc/nimbus/authorized_keys'}
+                    self.assertEqual(keys.intersection(archive.getnames()), keys if private else set())
+                    for name in ('opt/nimbus/image-start.sh', 'opt/nimbus/dropbearmulti', 'etc/nimbus'):
+                        member = archive.getmember(name)
+                        self.assertEqual((member.uid, member.gid, member.mode), (0, 0, 0o700))
+                    if private:
+                        for name in keys:
+                            member = archive.getmember(name)
+                            self.assertEqual((member.uid, member.gid, member.mode), (0, 0, 0o600))

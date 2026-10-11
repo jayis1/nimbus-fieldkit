@@ -10,12 +10,14 @@ Current offline hardening work produced separate generic/private v4 candidates w
 
 ## Current readiness gates
 
+Latest local build: **[beta1 rootfs candidates and test plan](BETA1-TEST-PLAN.md)**, incorporating the latest Music/upload/icon/bottom-card UI. Generic and private 256MiB images passed offline integrity/policy/fsck; **144 tests run, 142 pass, 2 skips**. Neither image has been booted, restore-tested or packaged as an approved vendor update. Both remain local. v4 evidence below is historical, not evidence for beta1 native boot.
+
 The user has accepted using the existing drive for a staged experimental trial despite the lack of a spare. See [experimental deployment preparation](EXPERIMENTAL-DEPLOYMENT.md). This changes the test-device plan, not the image's production/flash certification or the unproven recovery status. No firmware write has been performed.
 
 | Gate | State | Required evidence |
 | --- | --- | --- |
 | Source regression | Latest recorded full workspace suite passes; clean-clone CI added | Source tests, shell syntax and tracked-file hygiene |
-| Offline image integrity/policy | Passed for local generic/private v4 builds | SHA-256 list, geometry, offline fsck, archive/image checks and vendor modules; not native boot evidence |
+| Offline image integrity/policy | Passed for local generic/private beta1 builds; prior v4 retained | SHA-256 list, geometry, offline fsck, archive/image checks and vendor modules; not native boot evidence |
 | Settings interaction | Basic live usability PASSED by user report; served hashes verified | User confirms Settings work after patch; not an exhaustive control/destructive-operation test |
 | Live SSH/Telnet/WPA2 transition | User verified on installed device | Separate from candidate-image boot/provisioning |
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
