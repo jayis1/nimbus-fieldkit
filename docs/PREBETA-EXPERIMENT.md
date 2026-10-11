@@ -32,6 +32,9 @@ vendor redistribution rights.
 The local development suite ran 204 tests: 202 passed, 2 skipped. This includes
 local-only artifacts and later trial fixtures that are not all in this tag;
 source-only archive testing can skip private-artifact/browser dependencies.
+An independently extracted clean release-source snapshot ran **168 tests:
+149 passed, 19 skipped**, with no failures. Skips cover unavailable private
+artifacts and dependencies; they are not hardware qualification.
 Local beta3 candidates passed filesystem/integrity checks, **not native boot or
 recovery qualification**. Installed dashboard observations do not qualify a
 candidate image or demonstrate higher upload/download throughput.
