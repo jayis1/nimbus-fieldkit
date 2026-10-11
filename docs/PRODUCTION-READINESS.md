@@ -12,7 +12,7 @@ Offline provisioning/rescue follow-up: 90 local tests pass, including real host-
 | --- | --- | --- |
 | Source regression | Latest recorded full workspace suite passes; clean-clone CI added | Source tests, shell syntax and tracked-file hygiene |
 | Generic offline image integrity | Passed for local v1 | SHA-256 list, geometry, offline fsck |
-| Settings interaction | Local browser tests pass; live update pending | Real web-admin login and supported non-destructive controls |
+| Settings interaction | Guarded live UI patch installed; served hashes verified; browser gate pending | Real web-admin login and supported non-destructive controls |
 | Live SSH/Telnet/WPA2 transition | User verified on installed device | Separate from candidate-image boot/provisioning |
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
 | Image boot and vendor behavior | BLOCKED | Native boot, charging, battery, media, AP/uplink, USB transitions and restart behavior |
@@ -38,7 +38,16 @@ Existing feature wrappers in this repository include legacy integration code. Th
 
 ### UI-only Settings patch
 
-`device/unified/install-settings-fix.sh` is a reviewed source helper for the exact delivered v0.6 bridge/CSS baseline. Packaging substitutes the correct v0.6 asset prefix and includes script/assets checksums. Installer verifies baseline hashes, keeps private root-stage backups, replaces only two assets with verified temporary files and leaves homepage/runtime/network/services untouched. Rollback requires the installed assets still match the patch; later user edits are not overwritten. A partial install is not an invitation to rerun: original asset backups remain and require review. This patch has not been executed on the device by the agent.
+`device/unified/install-settings-fix.sh` is a reviewed source helper for the exact delivered v0.6 bridge/CSS baseline. Packaging substitutes the correct v0.6 asset prefix and includes script/assets checksums. Installer verifies baseline hashes, keeps private root-stage backups, replaces only two assets with verified temporary files and leaves homepage/runtime/network/services untouched. Rollback requires the installed assets still match the patch; later user edits are not overwritten. A partial install is not an invitation to rerun: original asset backups remain and require review.
+
+The user executed the guarded r1 package install from `/root/nimbus-settings-fix-r1`. Reported checks passed for the copied archive, packaged files, original live baseline and private backup assets. The installer reported successful completion. Agent read-only HTTP checks independently verified the served patched bridge/CSS against the package, and verified `/data/index.html` remains identical to the shipped unified v0.6 homepage. No browser authentication or Settings action was performed by the agent.
+
+| Live asset | SHA-256 after patch |
+| --- | --- |
+| `fieldkit-v06/bridge.js` | `9035367baf4d9ace5cc5f7d871700eb076ef11041c37b69af4cb8a7645bea138` |
+| `fieldkit-v06/stock-dark.css` | `d1428615bd883030f5d11089aeb4a802eb0ca448c588e076baa9db53ac700164` |
+
+Private original asset copies remain under `/root/nimbus-settings-fix-r1/backups`. Guarded rollback, only if needed and after review: `sh /root/nimbus-settings-fix-r1/install-settings-fix.sh rollback`. No rollback has been performed. Package installation is not proof of actual browser sign-in/click behavior.
 
 Real web-admin login is still required. Testing the patched live page must not involve format/reset/firmware upgrades; use non-destructive navigation and Settings dialogs only.
 

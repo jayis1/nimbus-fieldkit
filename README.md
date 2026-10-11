@@ -604,7 +604,7 @@ Private backups are recovery material, not release assets. Release visibility an
 
 ### Near term
 
-- Apply and validate the Settings usability fix on the live unified homepage without flashing.
+- Validate browser sign-in and non-destructive Settings behavior after the guarded live UI-only patch; served hashes and unchanged homepage have been verified, without flashing.
 - Design a safe candidate SD-access policy without silently overriding boot-time read-only detection. Live bounded writes, reboot readback and both normal/writable-SD USB cycles passed; [evidence and remaining limits](docs/SD-VALIDATION.md).
 - Keep candidate-image SD validation separate from the existing firmware's live test results; retained-marker cleanup is still pending.
 - Pair GameHack through a reviewed downstream management path without exposing SSH globally.
@@ -641,7 +641,7 @@ The listener is restricted to `wlan1`; GameHack is expected on `wlan0`. This is 
 
 ### Settings look correct but administrative rows do nothing
 
-Web-admin authentication is independent of SSH. Check the web login state and use the password field/Enter in the current stock-based live page. The staged fix adds an explicit Sign in button and locked-state explanation. It does not bypass authentication or guarantee that every vendor setting is supported.
+Web-admin authentication is independent of SSH. The guarded live Settings patch adds an explicit **Sign in** button and locked-state explanation; hard-refresh the page if they are missing. Enter the device web-admin password there, not the SSH key passphrase. The patch does not bypass authentication or guarantee that every vendor setting is supported; actual browser behavior still needs validation.
 
 ### The old standalone dashboard still appears
 
