@@ -2,6 +2,19 @@
 
 ## Delivery status
 
+### Subsequent beta2 revision
+
+The requested [Nib desktop buddy](DESKTOP-BUDDY.md) is now included in newly named **beta2** candidates, without overwriting beta1:
+
+| Variant | Local image path | SHA-256 |
+| --- | --- | --- |
+| Generic | `build/nimbus-custom-rootfs-beta2/rootfs.ext3.candidate` | `9be23fdca5f4196390cfdb3eb96773f46e8ddd703fde6314628a170d5361b3b7` |
+| Private drive-a | `.private-provisioning/drive-a-rootfs-beta2/rootfs.ext3.candidate` | `1fa635225ddcf6d08a2556201f2206c2b7f3b53bc753c2af0feacd7d82350d0d` |
+
+Both remain 256MiB, local and NOT FLASHABLE. Builder fsck/policy/module checks and independent complete-artifact integrity audit passed. Beta regression additionally compares mascot bytes/source hash against each beta2 archive/ext3 image. Latest full suite: **150 run, 148 pass, 2 skips**, with fixture-only host sync isolation described in the buddy notes. Exact overlay/input hashes are in each manifest; native boot/recovery/deployment/licensing gates below remain unchanged. No vendor update container is generated, and no beta2 image is publicly distributed.
+
+### Retained beta1 build
+
 Built at implementation checkpoint `e50f628`, with exact input/overlay hashes recorded in each `BUILD-MANIFEST.json`. **Beta1 is an offline rootfs candidate, not an installable vendor firmware update, not flash-approved and not production-ready.** No live image deployment occurred. Old v4 images and backups are retained unchanged.
 
 | Variant | Local image path | SHA-256 |
@@ -45,6 +58,8 @@ The mutable manifest cannot certify native hardware or licensing. Do not rename 
 1. **Current, consistent rollback capture:** retain all original backups; the fresh live raw rootfs capture is inconsistent and its journal-reviewed copy failed full checking. It is not a restoration image. Review bounded writer/SSH handover and non-forced root read-only capture separately; no root freeze/remount/service-stop authorization comes from this build. See [capture review](CONSISTENT-CAPTURE-REVIEW.md).
 2. **Recovery/restoration:** independently establish the exact installed-device recovery entry and matching restore route. Rescue currently auto-invokes a destructive updater; it is not a passive rescue shell. No guaranteed recovery is available and the only drive could be bricked.
 3. **Deployment chain:** review the entire vendor wrapper/rescue updater, not merely a rootfs payload. Enumerate partition preservation, firmware-pool/environment writes, fallbacks, hook behavior, failure/abort and rollback routes. A safe package does not cancel earlier updater side effects.
+
+   Subsequent [deployment-chain review](DEPLOYMENT-CHAIN-REVIEW.md) rejects unchanged stock hooks/default programming: custom hook failures are unchecked, pre-action changes bootdelay and clears firmware-pool material, and destructive rescue fallback precedes hooks. No installable beta wrapper has been generated. The reviewed metadata-only next checkpoint is documented there.
 4. **Power and management:** arrange stable external power without simultaneous USB media ownership; recheck geometry/USB state, private image identity/client pairing, wlan1 availability and exact artifact hash. Battery-only preflight is not stable-power evidence.
 5. **Separate trial approval:** review exact operations, expected duration, interruption risks and limits of recovery before a write. Current deliverables contain no deployment command or approved updater container.
 

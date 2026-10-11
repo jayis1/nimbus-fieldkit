@@ -106,7 +106,9 @@ class CustomImageTests(unittest.TestCase):
         candidates = [(ROOT / 'build/nimbus-custom-rootfs-candidate-v4', False),
                       (ROOT / '.private-provisioning/drive-a-rootfs-candidate-v4', True),
                       (ROOT / 'build/nimbus-custom-rootfs-beta1', False),
-                      (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True)]
+                      (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True),
+                      (ROOT / 'build/nimbus-custom-rootfs-beta2', False),
+                      (ROOT / '.private-provisioning/drive-a-rootfs-beta2', True)]
         available = [(base, private) for base, private in candidates if base.exists()]
         if not available or not shutil.which('debugfs'):
             self.skipTest('Hardened local candidate/debugfs unavailable')
@@ -132,9 +134,11 @@ class CustomImageTests(unittest.TestCase):
                         # Never print private bytes in assertion failure diagnostics.
                         self.assertTrue(result.stdout == archive.extractfile(name).read(), 'Image/archive mismatch: ' + name)
 
-    def test_beta1_latest_ui_provenance_and_fail_closed_gates(self):
+    def test_beta_ui_provenance_and_fail_closed_gates(self):
         candidates = [(ROOT / 'build/nimbus-custom-rootfs-beta1', False),
-                      (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True)]
+                      (ROOT / '.private-provisioning/drive-a-rootfs-beta1', True),
+                      (ROOT / 'build/nimbus-custom-rootfs-beta2', False),
+                      (ROOT / '.private-provisioning/drive-a-rootfs-beta2', True)]
         available = [(base, private) for base, private in candidates if base.exists()]
         if not available or not shutil.which('debugfs'):
             self.skipTest('Local beta1 candidates/debugfs unavailable')
@@ -144,7 +148,11 @@ class CustomImageTests(unittest.TestCase):
                 for flag in ('flash_ready', 'boot_tested', 'recovery_tested', 'vendor_update_container'):
                     self.assertFalse(manifest[flag])
                 with tarfile.open(base / 'rootfs.tar') as archive:
-                    for filename in ('audio-html5.js', 'upload-progress.js', 'stock-dark.css'):
+                    files = ['audio-html5.js', 'upload-progress.js', 'stock-dark.css']
+                    if base.name.endswith('beta2'):
+                        files.append('mascot.js')
+                        self.assertIn(b'/data/fieldkit-v06/mascot.js', archive.extractfile('nimbus/data/index.html').read())
+                    for filename in files:
                         source = 'device/unified/' + filename
                         name = 'nimbus/data/fieldkit-v06/' + filename
                         self.assertEqual(manifest['overlay_source_sha256'][source], builder.digest(ROOT / source))

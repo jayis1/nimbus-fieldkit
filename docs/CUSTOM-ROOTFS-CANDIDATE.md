@@ -1,6 +1,6 @@
 # Custom SanDisk rootfs candidates — offline only
 
-Latest local output: `build/nimbus-custom-rootfs-beta1/`, with private counterpart `.private-provisioning/drive-a-rootfs-beta1/`. See [beta1 delivery/test plan](BETA1-TEST-PLAN.md). Both remain NOT FLASHABLE. Earlier v4 startup/security evidence remains in [v4 hardening](OFFLINE-CANDIDATE-HARDENING.md); all prior artifacts are retained. The v1 evidence below is historical, not a current delivery recommendation.
+Latest local output: `build/nimbus-custom-rootfs-beta2/`, with private counterpart `.private-provisioning/drive-a-rootfs-beta2/`. See [beta delivery/test plan](BETA1-TEST-PLAN.md). Both remain NOT FLASHABLE; beta1 is retained unchanged. Earlier v4 startup/security evidence remains in [v4 hardening](OFFLINE-CANDIDATE-HARDENING.md); all prior artifacts are retained. The v1 evidence below is historical, not a current delivery recommendation.
 
 Follow-up: [private offline SSH provisioning](OFFLINE-PROVISIONING.md) can create a separately staged per-device candidate under ignored `.private-provisioning/`. That candidate contains a private host key and must never be publicly redistributed. The original generic v1 remains unchanged. [Installed rescue review](RECOVERY-IMAGE-REVIEW.md) identifies the installed rescue in private backups and explains why the raw ext3 artifact is not a vendor update payload. Boot/recovery gates still block flashing.
 

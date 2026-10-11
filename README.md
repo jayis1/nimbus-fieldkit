@@ -586,6 +586,8 @@ The associated GameHack staging tree is a separate project/workspace. Its newer 
 | Genuine upload percentage (guarded XHR candidate) | [UPLOAD-PERCENTAGE.md](docs/UPLOAD-PERCENTAGE.md) |
 | FieldKit toolbox icon and bottom upload card | [FIELDKIT-ICON.md](docs/FIELDKIT-ICON.md) |
 | Local beta1 images and production qualification | [BETA1-TEST-PLAN.md](docs/BETA1-TEST-PLAN.md) |
+| Decorative mouse-following desktop buddy | [DESKTOP-BUDDY.md](docs/DESKTOP-BUDDY.md) |
+| Vendor deployment chain hazards and next checkpoint | [DEPLOYMENT-CHAIN-REVIEW.md](docs/DEPLOYMENT-CHAIN-REVIEW.md) |
 | Public preview assets and production blockers | [PRODUCTION-READINESS.md](docs/PRODUCTION-READINESS.md) |
 | Planned two-part GameHack/SanDisk Android/iOS companion | [MOBILE-COMPANION-APPS.md](docs/MOBILE-COMPANION-APPS.md) |
 

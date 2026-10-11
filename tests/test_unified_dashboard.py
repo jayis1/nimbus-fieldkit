@@ -39,8 +39,8 @@ class UnifiedTests(unittest.TestCase):
         ids = lambda value: re.findall(r'id=["\']([^"\']+)', value)
         self.assertTrue(set(ids(self.original)).issubset(ids(page)))
         scripts = lambda value: re.findall(r'<script[^>]*src=["\']([^"\']+)', value)
-        self.assertEqual(scripts(page)[:-3], scripts(self.original))
-        self.assertEqual(scripts(page)[-3:], ['/data/fieldkit-v05/audio-html5.js', '/data/fieldkit-v05/upload-progress.js', '/data/fieldkit-v05/bridge.js'])
+        self.assertEqual(scripts(page)[:-4], scripts(self.original))
+        self.assertEqual(scripts(page)[-4:], ['/data/fieldkit-v05/audio-html5.js', '/data/fieldkit-v05/upload-progress.js', '/data/fieldkit-v05/bridge.js', '/data/fieldkit-v05/mascot.js'])
         for identifier in ('btnUpload', 'btnDownload', 'btnDel', 'btnNew', 'btnFolderView', 'btnPhotosView', 'btnVideosView', 'btnMusicView', 'btnSetting', 'setting-connect-to-internet-popup', 'setting-format-nimbus', 'setting-check-firmware-upgrade'):
             self.assertIn(identifier, ids(page))
         self.assertIn('btnNimbusFieldKit', page)
@@ -113,7 +113,8 @@ class UnifiedTests(unittest.TestCase):
         controller.write_bytes(warning_fix.patch_controller(controller.read_bytes()))
         (web/'index.html').write_bytes(browser_files['index.html'].replace(b'</body>',b'<script src="/browser-test.js"></script></body>'))
         page = web/'index.html'
-        page.write_bytes(page.read_bytes().replace(b'<head>', b'<head><script>Object.defineProperty(navigator,"userAgent",{value:"Mozilla/5.0 Firefox/128.0"});</script>', 1))
+        # Deterministic frame callbacks: dump-dom virtual time does not guarantee compositor frames.
+        page.write_bytes(page.read_bytes().replace(b'<head>', b'<head><script>Object.defineProperty(navigator,"userAgent",{value:"Mozilla/5.0 Firefox/128.0"});window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);window.cancelAnimationFrame=clearTimeout;</script>', 1))
         for name, content in browser_files.items():
             if name.startswith('fieldkit-v'):
                 output=web/'data'/name;output.parent.mkdir(parents=True,exist_ok=True);output.write_bytes(content)
@@ -130,6 +131,18 @@ class UnifiedTests(unittest.TestCase):
         (web/'browser-test.js').write_text('''
           (async()=>{
             const checks=[];
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const buddy=document.getElementById('nimbus-mascot');
+            checks.push(!!buddy && buddy.getBoundingClientRect().left===16);
+            checks.push(buddy.shadowRoot.querySelectorAll('.pupil').length===2);
+            document.dispatchEvent(new PointerEvent('pointermove',{pointerType:'mouse',clientX:innerWidth,clientY:0}));
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const gaze=buddy.shadowRoot.querySelector('.pupil').getAttribute('transform');
+            const follows=matchMedia('(pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+            checks.push(follows ? gaze!=='translate(0.00 0.00)' : gaze==='translate(0.00 0.00)');
+            document.documentElement.dispatchEvent(new PointerEvent('pointerleave',{pointerType:'mouse'}));
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            checks.push(buddy.shadowRoot.querySelector('.pupil').getAttribute('transform')==='translate(0.00 0.00)');
             const fieldkit=document.getElementById('btnNimbusFieldKit');
             const icon=getComputedStyle(fieldkit,'::before');
             checks.push(icon.width==='24px' && icon.height==='24px' && icon.maskImage.includes('data:image/svg+xml'));
@@ -144,6 +157,7 @@ class UnifiedTests(unittest.TestCase):
             t4u.elementBlockUI('Uploading',()=>cancelled++);
             await new Promise(resolve=>setTimeout(resolve,100));
             checks.push(getComputedStyle(busy).display!=='none');
+            checks.push(innerWidth>480 || getComputedStyle(buddy).display==='none');
             checks.push(getComputedStyle(busy.querySelector('.loading')).display==='none');
             checks.push(getComputedStyle(busy,'::before').animationName===(matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'nimbus-upload-spin'));
             checks.push(getComputedStyle(busy).borderRadius==='16px');
@@ -155,6 +169,8 @@ class UnifiedTests(unittest.TestCase):
             musicBar.style.display='block';
             const liftedRect=busy.getBoundingClientRect();
             checks.push(Math.abs(liftedRect.bottom-(innerHeight-110))<2);
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            checks.push(buddy.style.bottom==='110px');
             musicBar.setAttribute('style',previousBarStyle);
             checks.push(getComputedStyle(document.getElementById('btnMessageCancel2')).height==='34px');
             // Reproduce a file-header stacking overlap over the card's lower half.
@@ -215,6 +231,8 @@ class UnifiedTests(unittest.TestCase):
             await new Promise(resolve=>setTimeout(resolve,500));
             document.getElementById('nimbus-global-theme').click();
             checks.push(document.documentElement.dataset.theme==='light');
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            checks.push(buddy.dataset.theme==='light');
             checks.push(getComputedStyle(fieldkit,'::before').backgroundColor==='rgb(8, 121, 108)');
             t4u.elementBlockUI('Uploading');
             await new Promise(resolve=>setTimeout(resolve,100));
@@ -223,6 +241,10 @@ class UnifiedTests(unittest.TestCase):
             await new Promise(resolve=>setTimeout(resolve,500));
             checks.push(getComputedStyle(busy).display==='none');
             document.getElementById('nimbus-global-theme').click();
+            buddy.shadowRoot.querySelector('button').click();
+            checks.push(!document.getElementById('nimbus-mascot') && localStorage.getItem('nimbus-mascot-hidden-v1')==='yes');
+            document.getElementById('nimbus-buddy-toggle').click();
+            checks.push(!!document.getElementById('nimbus-mascot') && localStorage.getItem('nimbus-mascot-hidden-v1')===null);
             document.getElementById('nimbus-quick-jump').click();
             const palette=document.getElementById('nimbus-jump-dialog');
             checks.push(palette.open);

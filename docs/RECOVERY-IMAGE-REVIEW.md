@@ -26,6 +26,8 @@ The raw offline ext3 candidate therefore is **not** the payload expected by the 
 
 ## Remaining recovery gates
 
+The subsequent [beta1 deployment-chain review](DEPLOYMENT-CHAIN-REVIEW.md) pins installed-rescue and stock package scripts, maps ordering/failure/preservation hazards and rejects the unchanged vendor deployment chain. In particular, package hook exit statuses are ignored and the stock pre-action changes bootloader settings even without a bootloader payload. A custom installer alone is not an established safe route.
+
 Further read-only startup inspection found `/etc/rc.d/rc.conf` schedules `nimbus-last`, whose `start` action unconditionally invokes `/opt/qsi/scripts/upgrade_firmware.sh`. Installed rescue must not be treated as a passive backup/inspection shell: updater side effects may begin during boot, before management access. No rescue boot was performed. See [consistent-capture review](EXPERIMENTAL-DEPLOYMENT.md#consistent-capture-feasibility-review) for the normal kernel's watchdog constraints and pending read-only capability inventory.
 
 1. Pin and verify the physical unit's installed bootloader/partition configuration and rescue invocation procedure independently.
