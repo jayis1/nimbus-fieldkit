@@ -12,7 +12,7 @@ GATES = {
     'boot_tested': 'Custom image native boot has not been verified.',
     'recovery_tested': 'Matching disaster recovery/restoration has not been verified.',
     'vendor_update_container': 'No reviewed vendor update/deployment container is available.',
-    'sd_write_verified': 'Safe SD write/readback has not been verified.',
+    'sd_write_verified': 'Candidate SD startup, persistent readback and USB ownership handoff remain unverified.',
     'downstream_pairing_verified': 'GameHack downstream management/transfer pairing is unverified.',
     'redistribution_reviewed': 'Vendor-component redistribution rights have not been established.',
     'legacy_services_reviewed': 'Legacy HTTP/FTP/accounts/reset behavior remains unaudited.'}

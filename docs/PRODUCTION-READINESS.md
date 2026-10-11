@@ -17,7 +17,7 @@ Offline provisioning/rescue follow-up: 90 local tests pass, including real host-
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
 | Image boot and vendor behavior | BLOCKED | Native boot, charging, battery, media, AP/uplink, USB transitions and restart behavior |
 | Recovery/restoration | Installed rescue located offline; restore BLOCKED | Matching verified rescue route and successful restore; raw-backup checksums alone are insufficient |
-| SD writes | BLOCKED | Important-data backup, lock state, exclusive ownership, diagnosed mount policy, explicit tiny verified write/readback |
+| SD writes | Live bounded write/readback PASSED; image/persistence gate pending | Reboot mount policy, persistent-data readback and exclusive USB handoff; see SD validation evidence |
 | GameHack downstream pairing | BLOCKED | wlan0 policy plus pinned fresh handheld pairing/transfer; no global management exposure |
 | Legacy services/accounts | BLOCKED | HTTP/FTP dependency and privacy review, account/reset behavior, logs and access restrictions |
 | Vendor redistribution | BLOCKED | Applicable SanDisk/QSI/Tuxera and other binary license permissions |
@@ -39,7 +39,7 @@ Existing feature wrappers in this repository include legacy integration code. Th
 
 Real web-admin login is still required. Testing the patched live page must not involve format/reset/firmware upgrades; use non-destructive navigation and Settings dialogs only.
 
-SD remains `texfat ro` after USB gadget unload, despite block read-only flags being zero. Vendor automount code does not explicitly request ro in the reviewed path; boot detection previously reported ro. Do not patch a presumed capacity limit or force a remount. Confirm card/adapter lock state and important-data backup, then inspect SD-specific sensor/mount evidence. Never call the automount script as a diagnostic: its exFAT fallback invokes an automatic checker.
+Earlier SD evidence showed `texfat ro` after USB gadget unload, despite block read-only flags being zero. Vendor automount code does not explicitly request ro in the reviewed path; boot detection reported ro. Subsequent user-run non-forced remount and bounded write/readback passed; see [SD validation](SD-VALIDATION.md). Do not patch a presumed capacity limit or force read-only flags clear. Never call the automount script as a diagnostic: its exFAT fallback invokes an automatic checker.
 
 User follow-up: SD data is considered disposable and backup is declined. Card unlocked state is probable, not confirmed. This removes the data-backup prerequisite for a separately guarded bounded write test, not the exclusive-ownership, lock-state or mount-policy checks. No format, repair, forced remount or firmware flash has been performed or implied.
 
