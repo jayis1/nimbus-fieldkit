@@ -1,6 +1,7 @@
 # Private backups, device state, user data and extracted firmware.
 /numbus-backup/
 /.private-backups/
+/.private-provisioning/
 /backups/
 /private/
 /vault/

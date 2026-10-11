@@ -63,6 +63,17 @@ def write(root, name, data, mode=0o644):
 
 
 def build(args):
+    provisioning = None
+    provision_dir = getattr(args, 'provisioning_dir', None)
+    if provision_dir:
+        if not getattr(args, 'dropbearkey', None):
+            raise ValueError('Private provisioning requires a trusted host dropbearkey validator.')
+        spec = importlib.util.spec_from_file_location('provision_image', ROOT / 'scripts/provision-image.py')
+        provision = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(provision)
+        provisioning = provision.validate(provision_dir, args.dropbearkey.resolve())
+        # A provisioned rootfs contains a private identity. Never put it in public build artifacts.
+        provision.private_path(args.output)
     if digest(args.stock_rootfs) != STOCK_HASH:
         raise ValueError('Vendor rootfs hash does not match reviewed 3.04 input.')
     if digest(args.ssh_binary) != SSH_HASH:
@@ -123,6 +134,13 @@ def build(args):
     keys = root / 'etc/nimbus'
     keys.mkdir(mode=0o700)
     write(root, 'etc/nimbus/PROVISIONING.txt', b'No keys included. Provision a unique Ed25519 host key and authorized_keys securely before any boot. Do not flash this candidate.\n', 0o600)
+    if provisioning:
+        for name in ('host-ed25519', 'authorized_keys'):
+            data = provision.read_private(provision_dir / name)
+            if hashlib.sha256(data).hexdigest() != provisioning['files'][name]:
+                raise ValueError('Provisioning changed during build.')
+            write(root, 'etc/nimbus/' + name, data, 0o600)
+        write(root, 'etc/nimbus/PROVISIONING.txt', b'PRIVATE PER-DEVICE CANDIDATE. Unique SSH material included. Do not redistribute or flash before boot/recovery gates pass. Wi-Fi settings remain external.\n', 0o600)
     conf = (root / 'etc/inetd.conf').read_text()
     lines = ['# NIMBUS-TELNET-OFF ' + line if line.split() and line.split()[0] == 'telnet' else line for line in conf.splitlines()]
     write(root, 'etc/inetd.conf', ('\n'.join(lines) + '\n').encode())
@@ -169,9 +187,18 @@ def build(args):
                 'credentials': 'No personal keys/passwords/settings/backups imported; stock vendor accounts otherwise remain.',
                 'preserved': ['vendor kernel/modules', 'bootloader/rescue external to this image', 'partition layout external to this image', 'stock web handlers'],
                 'blocked': ['secure offline provisioning', 'recovery/restoration', 'native boot', 'SD write validation', 'GameHack downstream SSH access'],
-                'artifacts': {p.name: digest(p) for p in (image, root_tar, output / companion.name, ui)}}
+                 'artifacts': {p.name: digest(p) for p in (image, root_tar, output / companion.name, ui)}}
+    if provisioning:
+        manifest['credentials'] = 'PRIVATE per-device SSH identity; existing Wi-Fi settings remain external. Never redistribute.'
+        manifest['private_per_device'] = True
+        manifest['ssh_material_validated_offline'] = True
+        manifest['host_fingerprint'] = provisioning['host_fingerprint']
+        manifest['client_fingerprint'] = provisioning['client_fingerprint']
+        manifest['secure_provisioning_verified'] = False
     (output / 'BUILD-MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    (output / 'NOT-FLASHABLE.txt').write_text('OFFLINE CANDIDATE ONLY. Not a vendor .img updater. No boot/recovery test. No personal SSH keys or Wi-Fi credentials included. Do not use dd, vendor upgrade, rescue or USB flashing with this artifact. SD write support is unverified.\n')
+    warning = 'OFFLINE CANDIDATE ONLY. Not a vendor .img updater. No boot/recovery test. Do not use dd, vendor upgrade, rescue or USB flashing with this artifact. SD write support is unverified.\n'
+    warning += 'PRIVATE SSH KEYS INCLUDED. NEVER REDISTRIBUTE.\n' if provisioning else 'No personal SSH keys or Wi-Fi credentials included.\n'
+    (output / 'NOT-FLASHABLE.txt').write_text(warning)
     sums = {p.name: digest(p) for p in output.iterdir() if p.is_file() and p.name != 'SHA256SUMS'}
     (output / 'SHA256SUMS').write_text(''.join(value + '  ' + name + '\n' for name, value in sorted(sums.items())))
     print(json.dumps(manifest, indent=2))
@@ -182,6 +209,8 @@ if __name__ == '__main__':
     parser.add_argument('--stock-rootfs', type=Path, required=True)
     parser.add_argument('--ssh-binary', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--provisioning-dir', type=Path, help='Optional PRIVATE per-device SSH bundle')
+    parser.add_argument('--dropbearkey', type=Path, help='Trusted host validator required with provisioning')
     args = parser.parse_args()
     if not os.environ.get('FAKEROOTKEY'):
         raise SystemExit('Run under fakeroot to preserve vendor ownership without host root privileges.')

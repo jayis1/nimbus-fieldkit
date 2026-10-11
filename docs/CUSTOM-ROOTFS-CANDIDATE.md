@@ -2,6 +2,8 @@
 
 Output: `build/nimbus-custom-rootfs-candidate-v1/`.
 
+Follow-up: [private offline SSH provisioning](OFFLINE-PROVISIONING.md) can create a separately staged per-device candidate under ignored `.private-provisioning/`. That candidate contains a private host key and must never be publicly redistributed. The original generic v1 remains unchanged. [Installed rescue review](RECOVERY-IMAGE-REVIEW.md) identifies the installed rescue in private backups and explains why the raw ext3 artifact is not a vendor update payload. Boot/recovery gates still block flashing.
+
 Contains a 256 MiB ext3 rootfs filesystem image (`rootfs.ext3.candidate`), rootfs tar, separate staged GameHack source bundle, manifests/checksums and build/check logs. This is **not a vendor update container, not a full-disk image, and not flash-ready**. Do not rename it to nimbus.img, copy it to the vendor updater or write it with dd. Boot and disaster recovery are untested. No live drive, bootloader, partition or firmware updater was touched by the build.
 
 ## Included

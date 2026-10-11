@@ -4,7 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 
-FORBIDDEN = ('numbus-backup/', '.private-backups/', 'build/', 'vault/', 'System Volume Information/')
+FORBIDDEN = ('numbus-backup/', '.private-backups/', '.private-provisioning/', 'build/', 'vault/', 'System Volume Information/')
 EXTENSIONS = {'.img', '.bin', '.tar', '.pem', '.key', '.pcap', '.pcapng', '.log'}
 # Split markers so this checker can itself be safely included in source scans.
 PATTERNS = [rb'-----BEGIN (?:OPENSSH |RSA |EC |DSA )?' + rb'PRIVATE KEY-----',
