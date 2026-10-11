@@ -130,6 +130,11 @@ class UnifiedTests(unittest.TestCase):
         (web/'browser-test.js').write_text('''
           (async()=>{
             const checks=[];
+            const fieldkit=document.getElementById('btnNimbusFieldKit');
+            const icon=getComputedStyle(fieldkit,'::before');
+            checks.push(icon.width==='24px' && icon.height==='24px' && icon.maskImage.includes('data:image/svg+xml'));
+            checks.push(icon.backgroundColor==='rgb(124, 235, 211)' && icon.pointerEvents==='none');
+            checks.push(parseFloat(icon.left)+parseFloat(icon.width)<parseFloat(getComputedStyle(fieldkit).paddingLeft));
             checks.push(!document.body.textContent.includes('Please install Adobe'));
             checks.push(!document.body.textContent.includes('Your browser needs Flash'));
             // Exercise the real vendor busy/cancel lifecycle without sending an upload.
@@ -144,6 +149,13 @@ class UnifiedTests(unittest.TestCase):
             checks.push(getComputedStyle(busy).borderRadius==='16px');
             const busyRect=busy.getBoundingClientRect();
             checks.push(busyRect.left>=0 && busyRect.right<=innerWidth);
+            checks.push(Math.abs(busyRect.bottom-(innerHeight-(innerWidth<=480?12:20)))<2);
+            const musicBar=document.getElementById('floatingbar');
+            const previousBarStyle=musicBar.getAttribute('style');
+            musicBar.style.display='block';
+            const liftedRect=busy.getBoundingClientRect();
+            checks.push(Math.abs(liftedRect.bottom-(innerHeight-110))<2);
+            musicBar.setAttribute('style',previousBarStyle);
             checks.push(getComputedStyle(document.getElementById('btnMessageCancel2')).height==='34px');
             // Reproduce a file-header stacking overlap over the card's lower half.
             const obstruction=document.createElement('div');
@@ -203,6 +215,7 @@ class UnifiedTests(unittest.TestCase):
             await new Promise(resolve=>setTimeout(resolve,500));
             document.getElementById('nimbus-global-theme').click();
             checks.push(document.documentElement.dataset.theme==='light');
+            checks.push(getComputedStyle(fieldkit,'::before').backgroundColor==='rgb(8, 121, 108)');
             t4u.elementBlockUI('Uploading');
             await new Promise(resolve=>setTimeout(resolve,100));
             checks.push(getComputedStyle(busy,'::before').borderTopColor==='rgb(8, 121, 108)');

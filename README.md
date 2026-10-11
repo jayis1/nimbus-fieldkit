@@ -584,6 +584,7 @@ The associated GameHack staging tree is a separate project/workspace. Its newer 
 | Original Music view without Flash (UI installed; playback validation pending) | [HTML5-MUSIC.md](docs/HTML5-MUSIC.md) |
 | Modern upload loading ring (CSS-only candidate) | [UPLOAD-LOADER.md](docs/UPLOAD-LOADER.md) |
 | Genuine upload percentage (guarded XHR candidate) | [UPLOAD-PERCENTAGE.md](docs/UPLOAD-PERCENTAGE.md) |
+| FieldKit toolbox icon and bottom upload card | [FIELDKIT-ICON.md](docs/FIELDKIT-ICON.md) |
 | Public preview assets and production blockers | [PRODUCTION-READINESS.md](docs/PRODUCTION-READINESS.md) |
 | Planned two-part GameHack/SanDisk Android/iOS companion | [MOBILE-COMPANION-APPS.md](docs/MOBILE-COMPANION-APPS.md) |
 

@@ -4,6 +4,8 @@
 
 The external 128GB card is detected at approximately 119GiB, its normal binary capacity. This is not a capacity restriction requiring a partition change.
 
+Later upload investigation again showed internal `/mnt/storage` writable and both SD mounts read-only, with ample SD space, block `ro=0`, and no currently loaded USB-export module. After a guarded user-run non-forced remount of **only** `/mnt/sdcard`, the returned mount table showed both internal and SD main mounts `rw` simultaneously. The user reported SD uploading appears to work. This is a temporary mount change; FTP was not changed, persistence was not enabled, and file-content/checksum/native failure/cancel tests were not returned. Historical USB gadget log entries were not treated as current export state. No formatting, repair or lock override occurred.
+
 1. `/dev/mmcblk1p1` was mounted `texfat ro` at `/mnt/sdcard` and its FTP bind `/var/ftp/sdcard`.
 2. `g_file_storage` was absent from `/proc/modules`; both disk sysfs and partition block read-only flags were zero. Historical gadget messages in dmesg do not mean the gadget is currently active.
 3. Boot logs reported `mmcblk1 ... (ro)`. The cause of that boot-time condition is not established; current block flags do not prove the mechanical switch/sensor's boot state.
