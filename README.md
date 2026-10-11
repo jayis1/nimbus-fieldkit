@@ -605,8 +605,8 @@ Private backups are recovery material, not release assets. Release visibility an
 ### Near term
 
 - Apply and validate the Settings usability fix on the live unified homepage without flashing.
-- Resolve the SD card's read-only mount policy safely after confirming lock state, backup and exclusive ownership.
-- Validate a tiny explicit card write, readback and cleanup only after those gates pass.
+- Design a safe candidate SD-access policy without silently overriding boot-time read-only detection. Live bounded writes, reboot readback and both normal/writable-SD USB cycles passed; [evidence and remaining limits](docs/SD-VALIDATION.md).
+- Keep candidate-image SD validation separate from the existing firmware's live test results; retained-marker cleanup is still pending.
 - Pair GameHack through a reviewed downstream management path without exposing SSH globally.
 - Add authenticated, pinned remote transfer rather than plaintext fallbacks.
 - Deploy and native-test the optional mounted-library features on the handheld.
