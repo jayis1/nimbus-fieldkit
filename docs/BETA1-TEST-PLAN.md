@@ -4,6 +4,13 @@
 
 ### Latest beta3 revision
 
+**Distribution follow-up:** the owner subsequently authorized attaching the
+generic beta3 image to the experimental prerelease. Only the generic image is
+public; the private image remains local. Vendor redistribution review is still
+unresolved and flash/boot/recovery gates remain false. See
+[updated prerelease scope](PREBETA-EXPERIMENT.md). The following local-only
+statements record the original build/release checkpoint, not current asset scope.
+
 New beta3 offline candidates include the current UI performance sources: cached
 Nib geometry, hidden-document work cancellation, duplicate DOM-write avoidance
 and visible narrow-screen upload controls. Nib remains included. The beta image
