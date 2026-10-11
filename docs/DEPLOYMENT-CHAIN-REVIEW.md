@@ -53,3 +53,34 @@ ssh -T -o StrictHostKeyChecking=yes \
 ```
 
 If root identity or USB checks fail, the first helper exits before the writer scan. The SSH passphrase is entered locally, never posted. Keep both listeners running; do not blindly recreate the tmpfs stage or reuse historical PIDs. Separately confirm an independent interactive pinned port-2225 session before any eventual old-listener handover. Hardware output and exact stop/restart/restoration review are still required before proposing a non-forced root read-only capture. No service stop, remount, freeze, raw write, repair, format, reboot or flashing is part of this checkpoint.
+
+### Returned live checkpoint
+
+The user ran the combined check through strictly pinned port 2225. Expected ext3 root identity and inactive USB export passed. Charger `online=1`, battery status `Not charging`, capacity unavailable: external power is now detected, but uninterrupted power and battery reserve are not certified. Both management ports had one listening entry. Temporary staging metadata was root:root 0700, log/PID root:root 0600, log 4619 bytes and PID file 5 bytes; contents were not printed.
+
+Fresh writer scan again observed only `nimbus` (reported PID 3288, one writable root fd) and the old `dropbearmulti-b` (reported PID 3423, two writable root fds). Zero shared writable root mappings and zero incomplete observations were reported. No replacement-listener/session writable root holder was observed. All four selected service hashes matched the reviewed stock versions. These PIDs are observations, **not authorized signal targets**; identity and start-time/socket/descriptor checks are still needed immediately before any handover.
+
+Next requirement: independently open and retain an interactive pinned port-2225 session, with shell history directed to `/dev/null`, then review exact old-listener and vendor-writer exit/restart/restoration handling. Neither listener nor vendor daemon has been stopped; no root remount/capture/firmware write occurred. The later UI additions must be included in any new consistent capture rather than relying on older raw snapshots.
+
+### Independent shell verified; identity inventory prepared
+
+The user opened the separately requested strict-existing-pin interactive port-2225 session with `HISTFILE=/dev/null`, returning `sh-3.2#`. Keep this shell open; that verifies independent access, not a stop/remount/restore trial.
+
+`device/handover-identity-preflight.sh` is the next read-only helper. It reads fixed private PID records for the old and replacement listeners, checks expected executable paths and pinned running-executable hashes, records start ticks and direct-child counts, and links each PID's socket descriptors to the expected unique IPv4 listening entry. It finds a unique vendor `nimbus` process and compares its executable against the reviewed vendor hash `b2472e7c34c22b2bb7dbda2d58ce8836cedccf5b10680047d60eaf10956220dd`. A mismatch/ambiguity stops review; no fallback name-based signaling exists.
+
+For these three processes it classifies writable regular root descriptors as the **known boot log** versus **other root files**, printing only counts. The vendor file's private path/content is not exposed. Root identity, inactive USB export, private stage directories and PID-record metadata are checked first. It does not read key/log/file contents, print command arguments or socket peers, execute vendor scripts, or send signals. All observations are racy and not pidfd-protected; they must not be repurposed as a stop command using recorded PIDs. Native results remain pending.
+
+From the **other PC terminal**, not the retained device shell:
+
+```sh
+ssh -T -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
+  -o HostKeyAlias='[172.16.10.178]:2224' \
+  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
+  -p 2225 root@172.16.10.178 'sh -s' \
+  < '/home/jais/Projects/sandisk wifi dims/device/handover-identity-preflight.sh'
+```
+
+Fixture tests verify exact executable/socket association, parenthesized process names in stat parsing, bounded start identity reporting, known-log/unknown-file count classification, output privacy, refusal of wrong socket/hash/USB state and unchanged fixture files. The helper never stops a process; exact stop/restart and service recovery logic still require separate review and approval. No rootfs remount/capture, handover or image deployment has been performed.
+
+Validation checkpoint: **153 tests run, 151 pass, 2 Node-dependent skips**, using the documented host-only fixture sync isolation. Beta2 image artifacts are unchanged by this metadata helper.
