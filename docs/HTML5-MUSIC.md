@@ -1,4 +1,4 @@
-# Original dashboard Music: HTML5-only candidate
+# Original dashboard Music: HTML5-only UI installed, playback validation pending
 
 The user requested browser music without Adobe Flash. The first-party adapter `device/unified/audio-html5.js` keeps the vendor Music view, playlist/controller objects and playback controls, but forces its existing jPlayer engine to use **HTML5 audio only**. This does not add a separate dashboard, a CDN dependency, transcoding, a server-side player or an unauthenticated command endpoint.
 
@@ -62,3 +62,9 @@ sh "$stage/install.sh" install
 ```
 
 This writes private root staging and the guarded homepage/audio UI assets on the live rootfs; it performs **no flashing, raw partition writes, service actions or mount changes**. Never bypass an archive/baseline hash refusal or rerun into a partial stage. No SFTP, HTTP media staging or host-key learning is involved. Preserve the existing Settings patch and keep both SSH listeners running. After successful installation, hard-refresh the original homepage and test an ordinary supported track; report playback/error behavior without posting credentials or private media. Independent served-asset verification and physical music playback remain pending.
+
+## Live installation evidence
+
+The user executed the guarded transfer/install through pinned port 2225. Reported whole-archive, package-file, live baseline, backup and final homepage checks passed; the installer completed. Agent read-only HTTP retrieval independently verified the served homepage matches the patched hash above and the served audio adapter matches current first-party source. The served Settings bridge (`9035367baf4d9ace5cc5f7d871700eb076ef11041c37b69af4cb8a7645bea138`) and CSS (`d1428615bd883030f5d11089aeb4a802eb0ca448c588e076baa9db53ac700164`) remain unchanged.
+
+The UI patch is therefore **installed and served**, not merely an offline candidate. Browser playback on the physical drive, phone/codec coverage, playlist behavior and byte-range seeking remain pending. No agent browser authentication, media playback, Settings action, service stop, remount or flash was performed. Original homepage rollback material remains under private `/root/nimbus-audio-html5-r1/backups/`; guard against later homepage/audio edits before any rollback. The earlier inconsistent raw rootfs backup predates this UI patch and must not be described as current or restoration-tested. Existing v4 image artifacts remain unchanged and do not include this addition.
