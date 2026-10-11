@@ -16,6 +16,24 @@ echo 'Selected mounts (no mount changes):'
 if [ -r /proc/mounts ]; then
     awk '$2 == "/" || $2 == "/tmp" || $2 == "/run" || $2 == "/dev/shm" {print $1, $2, $3, $4}' /proc/mounts
 fi
+echo 'Swap backing mounts (swap filenames suppressed; no swap changes):'
+if [ -r /proc/swaps ] && [ -r /proc/mounts ]; then
+    awk 'FNR == NR {mounts[$2]=$1; next}
+        FNR > 1 {
+            backing="unknown"; longest=0
+            for (m in mounts) {
+                if ((m == "/" || $1 == m || index($1, m "/") == 1) && length(m) > longest) {
+                    backing=mounts[m]; longest=length(m)
+                }
+            }
+            if ($2 == "partition") backing=$1
+            if (backing !~ /^\/dev\/(mmcblk[0-9]+(p[0-9]+)?|root)$/ && backing != "tmpfs" && backing != "shm") backing="other-or-unknown"
+            printf "swap%d type=%s size_kB=%s used_kB=%s priority=%s backing=%s\n", ++n, $2, $3, $4, $5, backing
+        }
+        END {if (!n) print "No active swap entries reported"}' /proc/mounts /proc/swaps
+else
+    echo 'Swap metadata unavailable'
+fi
 echo 'Vendor tool presence/hash (not executed):'
 for tool in /sbin/fsfreeze /usr/sbin/fsfreeze /bin/busybox; do
     if [ -f "$tool" ] && [ ! -L "$tool" ]; then
@@ -46,6 +64,25 @@ for dir in /sys/class/watchdog/watchdog*; do
         fi
     done
 done
+echo 'Processes with fd links to standard watchdog paths (links read, devices NOT opened):'
+watchdog_links=0
+if command -v readlink >/dev/null 2>&1; then
+    for fd in /proc/[0-9]*/fd/[0-9]*; do
+        [ -L "$fd" ] || continue
+        target=$(readlink "$fd" 2>/dev/null) || continue
+        case "$target" in
+            /dev/watchdog|/dev/watchdog0)
+                pid=${fd#/proc/}; pid=${pid%%/*}
+                printf 'pid=%s fd=%s standard-watchdog-link\n' "$pid" "${fd##*/}"
+                watchdog_links=$((watchdog_links + 1))
+                ;;
+        esac
+    done
+    printf 'Observed standard watchdog fd links: %s\n' "$watchdog_links"
+else
+    echo 'readlink unavailable'
+fi
+echo 'FD scan is racy and excludes aliases/closed handles; zero links does NOT prove watchdog inactive.'
 echo 'Selected process names ONLY (not arguments or open-device state):'
 ps -A | grep -E 'watchdog|event_manager|fw_server|dropbear' || :
 echo 'USB-export module evidence:'
