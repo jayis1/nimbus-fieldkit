@@ -195,7 +195,7 @@ def build(args):
         'scripts/build-unified-dashboard.py', 'scripts/package-native.py', 'scripts/package-flash-warning-fix.py',
         'scripts/provision-image.py', 'device/image-start.sh',
         'device/nimbus-sd-doctor.sh', 'device/retire-v04-homepage.sh',
-        'device/unified/bridge.js', 'device/unified/stock-dark.css', 'device/unified/audio-html5.js',
+        'device/unified/bridge.js', 'device/unified/stock-dark.css', 'device/unified/audio-html5.js', 'device/unified/upload-progress.js',
         'fieldkit/index.html', 'fieldkit/dashboard.css', 'fieldkit/dashboard.js',
         'docs/UNIFIED-DASHBOARD.md', 'docs/GAMEHACK-OPTIONAL-ENHANCEMENTS.md', 'docs/SECURITY-PLAN.md'}
     manifest['overlay_source_sha256'] = {name: digest(ROOT / name) for name in sorted(sources)}

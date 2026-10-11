@@ -46,7 +46,7 @@ def build(stock_archive, output, previous_bundle=None):
     stock = stock.replace('</head>', '<link rel="stylesheet" href="/data/fieldkit-v05/stock-dark.css" />\n</head>')
     stock = stock.replace('<ul class="navi02">', '<ul class="navi02">\n<li><a href="#fieldkit" id="btnNimbusFieldKit">FieldKit / tools</a></li>')
     stock = stock.replace('<div id="content" class="topMarginSpace">', '<div id="content" class="topMarginSpace">\n<div id="nimbus-unified-host"></div>')
-    stock = stock.replace('</body>', '<script src="/data/fieldkit-v05/audio-html5.js"></script>\n<script src="/data/fieldkit-v05/bridge.js"></script>\n</body>')
+    stock = stock.replace('</body>', '<script src="/data/fieldkit-v05/audio-html5.js"></script>\n<script src="/data/fieldkit-v05/upload-progress.js"></script>\n<script src="/data/fieldkit-v05/bridge.js"></script>\n</body>')
     stock = stock.replace('/data/fieldkit-v05/', f'/data/fieldkit-{asset_version}/')
     page = (ROOT / 'fieldkit/index.html').read_text()
     body = page.split('<body>', 1)[1].split('</body>', 1)[0]
@@ -73,7 +73,7 @@ const facade={getElementById:id=>surface.getElementById(id),querySelectorAll:s=>
     prefix = f'fieldkit-{asset_version}/'
     bridge = (ROOT / 'device/unified/bridge.js').read_text().replace('/data/fieldkit-v05/', f'/data/fieldkit-{asset_version}/')
     files = {'index.html': stock.encode(), prefix+'stock-dark.css': (ROOT / 'device/unified/stock-dark.css').read_bytes(),
-             prefix+'bridge.js': bridge.encode(), prefix+'audio-html5.js': (ROOT / 'device/unified/audio-html5.js').read_bytes(), prefix+'SECURITY-PLAN.md': (ROOT / 'docs/SECURITY-PLAN.md').read_bytes(),
+             prefix+'bridge.js': bridge.encode(), prefix+'audio-html5.js': (ROOT / 'device/unified/audio-html5.js').read_bytes(), prefix+'upload-progress.js': (ROOT / 'device/unified/upload-progress.js').read_bytes(), prefix+'SECURITY-PLAN.md': (ROOT / 'docs/SECURITY-PLAN.md').read_bytes(),
              prefix+'toolkit.html': body.encode(), prefix+'toolkit.css': css.encode(), prefix+'toolkit.js': script.encode()}
     files.update({'native/' + name: (ROOT / source).read_bytes() for name, source in native.SOURCES.items()})
     files['native/docs/UNIFIED-DASHBOARD.md'] = (ROOT / 'docs/UNIFIED-DASHBOARD.md').read_bytes()
@@ -116,7 +116,7 @@ case "${1:-}" in
   sh native/nimbus-dashboard.sh import-settings /mnt/storage/nimbus-fieldkit-v03
   sh native/nimbus-dashboard.sh snapshot
   mkdir /nimbus/data/fieldkit-v05
-   for file in stock-dark.css bridge.js audio-html5.js toolkit.html toolkit.css toolkit.js SECURITY-PLAN.md; do
+   for file in stock-dark.css bridge.js audio-html5.js upload-progress.js toolkit.html toolkit.css toolkit.js SECURITY-PLAN.md; do
    cp "fieldkit-v05/$file" "/nimbus/data/fieldkit-v05/$file"
    chmod 644 "/nimbus/data/fieldkit-v05/$file"
    filehash=$(sha256sum "fieldkit-v05/$file" | awk '{print $1}')

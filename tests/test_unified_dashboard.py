@@ -39,8 +39,8 @@ class UnifiedTests(unittest.TestCase):
         ids = lambda value: re.findall(r'id=["\']([^"\']+)', value)
         self.assertTrue(set(ids(self.original)).issubset(ids(page)))
         scripts = lambda value: re.findall(r'<script[^>]*src=["\']([^"\']+)', value)
-        self.assertEqual(scripts(page)[:-2], scripts(self.original))
-        self.assertEqual(scripts(page)[-2:], ['/data/fieldkit-v05/audio-html5.js', '/data/fieldkit-v05/bridge.js'])
+        self.assertEqual(scripts(page)[:-3], scripts(self.original))
+        self.assertEqual(scripts(page)[-3:], ['/data/fieldkit-v05/audio-html5.js', '/data/fieldkit-v05/upload-progress.js', '/data/fieldkit-v05/bridge.js'])
         for identifier in ('btnUpload', 'btnDownload', 'btnDel', 'btnNew', 'btnFolderView', 'btnPhotosView', 'btnVideosView', 'btnMusicView', 'btnSetting', 'setting-connect-to-internet-popup', 'setting-format-nimbus', 'setting-check-firmware-upgrade'):
             self.assertIn(identifier, ids(page))
         self.assertIn('btnNimbusFieldKit', page)
@@ -160,6 +160,47 @@ class UnifiedTests(unittest.TestCase):
             checks.push(getComputedStyle(document.getElementById('searchContainer')).zIndex!=='10020');
             checks.push(getComputedStyle(document.getElementById('searchContainer').parentNode).zIndex!=='10020');
             obstruction.remove();
+            // Deterministic byte events without contacting a drive or uploading media.
+            const realXHR=window.XMLHttpRequest;
+            const requests=[];let complete=0,failed=0,cleared=0;
+            class FixtureXHR {
+              constructor(){this.upload={};requests.push(this);}
+              open(method,url){this.method=method;this.url=url;}
+              send(body){this.body=body;}
+              abort(){this.onabort();}
+            }
+            const instance=Object.create(AjaxUpload.prototype);
+            instance._button={id:'btnUpload'};
+            instance._settings={name:'userfile',data:{},action:'/NimbusAPI/upload?rn&dest=%2Fstorage',
+              onSubmit(){t4u.elementBlockUI('Uploading',()=>instance.cancel());},
+              onComplete(){complete++;t4u.elementUnblockUI();},
+              onError(){failed++;t4u.elementUnblockUI();}};
+            instance.disable=()=>{};instance.enable=()=>{};instance._clearInput=()=>cleared++;
+            const selection=()=>{instance._input={files:[new File(['fixture'],'a.txt'),new File(['more'],'b.txt')]};};
+            window.XMLHttpRequest=FixtureXHR;
+            selection();instance.submit();let request=requests.at(-1);
+            checks.push(request.method==='POST' && new URL(request.url).pathname==='/NimbusAPI/upload');
+            checks.push(request.body.getAll('userfile').length===2);
+            request.upload.onprogress({lengthComputable:true,loaded:50,total:100});
+            checks.push(document.querySelector('#nimbus-upload-progress p').textContent==='50% sent');
+            request.upload.onprogress({lengthComputable:false,loaded:60,total:0});
+            checks.push(!document.querySelector('#nimbus-upload-progress progress').hasAttribute('value'));
+            request.upload.onprogress({lengthComputable:true,loaded:100,total:100});request.upload.onload();
+            checks.push(complete===0 && document.querySelector('#nimbus-upload-progress p').textContent.includes('waiting for device'));
+            request.status=200;request.responseText='<nimbus><errcode>0</errcode></nimbus>';request.onload();
+            checks.push(complete===1 && cleared===1);
+            selection();instance.submit();request=requests.at(-1);instance.cancel();
+            request.upload.onprogress({lengthComputable:true,loaded:75,total:100});
+            checks.push(complete===1 && failed===0 && document.getElementById('nimbus-upload-progress').hidden);
+            selection();instance.submit();request=requests.at(-1);request.status=500;request.onload();
+            checks.push(failed===1 && complete===1);
+            checks.push(NIMBUS_UPLOAD_PROGRESS.outcome('<nimbus><errcode>5</errcode></nimbus>')==='error');
+            checks.push(NIMBUS_UPLOAD_PROGRESS.outcome('<html>login</html>')==='unknown');
+            window.XMLHttpRequest=realXHR;
+            selection();instance.submit();
+            for(let i=0;i<80 && complete<2;i++)await new Promise(resolve=>setTimeout(resolve,25));
+            checks.push(complete===2 && failed===1);
+            await new Promise(resolve=>setTimeout(resolve,500));
             document.getElementById('nimbus-global-theme').click();
             checks.push(document.documentElement.dataset.theme==='light');
             t4u.elementBlockUI('Uploading');
@@ -270,6 +311,10 @@ class UnifiedTests(unittest.TestCase):
             def do_POST(self):
                 body=self.rfile.read(int(self.headers.get('Content-Length','0')))
                 type(self).writes.append(body)
+                if self.path.startswith('/NimbusAPI/upload?'):
+                    self.send_response(200);self.send_header('Content-Type','application/xml');self.end_headers()
+                    self.wfile.write(b'<nimbus><errcode>0</errcode></nimbus>')
+                    return
                 self.send_error(503,'Offline test fixture; device APIs deliberately unavailable')
         http=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(web)))
         thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
@@ -287,5 +332,6 @@ class UnifiedTests(unittest.TestCase):
                 self.assertIn('data-unified-test="passed"',reduced.stdout)
                 for body in Quiet.writes:
                     self.assertNotRegex(body.decode(errors='replace'),r'(?i)formatNimbus|resetNimbus|upgradeFirmware|setSSID|settings set')
+                self.assertTrue(any(b'name="userfile"; filename="a.txt"' in body and b'name="userfile"; filename="b.txt"' in body for body in Quiet.writes))
         finally:
             http.shutdown();http.server_close();thread.join()
