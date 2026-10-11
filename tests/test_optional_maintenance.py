@@ -29,6 +29,7 @@ class MaintenanceTests(unittest.TestCase):
             script = script.replace('[ "$(id -u)" = 0 ]', ':')
             script = script.replace('/mnt/storage/nimbus-fieldkit-v04/dashboard/index.html', str(page))
             script = script.replace('/root/nimbus-retired-v04-homepage', str(retired))
+            script = script.replace('\nsync\n', '\n: # Fixture: do not sync unrelated host disks.\n')
             path = root / 'retire.sh'
             path.write_text(script)
             subprocess.run(['sh', str(path)], check=True, capture_output=True)

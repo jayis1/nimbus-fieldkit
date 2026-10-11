@@ -8,6 +8,8 @@ The project retains the vendor's file browser, media views, uploads, and adminis
 
 **This is an independent development project—not an official SanDisk firmware release or a supported security upgrade.**
 
+**Public preview:** [v0.1.0-preview.1](https://github.com/jayis1/nimbus-fieldkit/releases/tag/v0.1.0-preview.1) is a source/customization-overlay prerelease, **not an installable firmware image**. Full vendor-based rootfs images remain local pending redistribution and deployment review. See [production readiness](docs/PRODUCTION-READINESS.md).
+
 > [!WARNING]
 > The custom filesystem image is an **offline candidate only**. It has not been boot-tested, is not a vendor firmware-update container, and must not be flashed. A valid checksum or clean filesystem check does not establish bootability or recoverability.
 
@@ -573,6 +575,7 @@ The associated GameHack staging tree is a separate project/workspace. Its newer 
 | Vendor firmware inspection | [FIRMWARE-3.04-INSPECTION.md](docs/FIRMWARE-3.04-INSPECTION.md) |
 | Recovery/update feasibility | [CUSTOM-FIRMWARE-FEASIBILITY.md](docs/CUSTOM-FIRMWARE-FEASIBILITY.md) |
 | Built rootfs candidate and provisioning gates | [CUSTOM-ROOTFS-CANDIDATE.md](docs/CUSTOM-ROOTFS-CANDIDATE.md) |
+| Public preview assets and production blockers | [PRODUCTION-READINESS.md](docs/PRODUCTION-READINESS.md) |
 
 Some documents are chronological investigation notes. Earlier statements may be superseded by explicitly recorded follow-ups. Do not copy an old diagnostic command or deployment assumption without reading the current status and later entries.
 

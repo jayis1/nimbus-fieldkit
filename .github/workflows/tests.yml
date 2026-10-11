@@ -1,0 +1,30 @@
+name: Source regression tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests (hardware and local-image tests may skip)
+        run: python -m unittest discover -s tests -v
+      - name: Shell syntax
+        run: |
+          git ls-files -z '*.sh' | xargs -0 -r -n 1 sh -n
+      - name: Tracked-file hygiene
+        run: python scripts/check-release-hygiene.py
