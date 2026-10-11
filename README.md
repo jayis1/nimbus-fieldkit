@@ -580,6 +580,7 @@ The associated GameHack staging tree is a separate project/workspace. Its newer 
 | Recovery/update feasibility | [CUSTOM-FIRMWARE-FEASIBILITY.md](docs/CUSTOM-FIRMWARE-FEASIBILITY.md) |
 | Built rootfs candidate and provisioning gates | [CUSTOM-ROOTFS-CANDIDATE.md](docs/CUSTOM-ROOTFS-CANDIDATE.md) |
 | Current v4 offline startup/archive hardening | [OFFLINE-CANDIDATE-HARDENING.md](docs/OFFLINE-CANDIDATE-HARDENING.md) |
+| Single-device experimental trial preparation | [EXPERIMENTAL-DEPLOYMENT.md](docs/EXPERIMENTAL-DEPLOYMENT.md) |
 | Public preview assets and production blockers | [PRODUCTION-READINESS.md](docs/PRODUCTION-READINESS.md) |
 | Planned two-part GameHack/SanDisk Android/iOS companion | [MOBILE-COMPANION-APPS.md](docs/MOBILE-COMPANION-APPS.md) |
 

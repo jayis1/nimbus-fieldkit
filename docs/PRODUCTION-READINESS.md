@@ -10,6 +10,8 @@ Current offline hardening work produced separate generic/private v4 candidates w
 
 ## Current readiness gates
 
+The user has accepted using the existing drive for a staged experimental trial despite the lack of a spare. See [experimental deployment preparation](EXPERIMENTAL-DEPLOYMENT.md). This changes the test-device plan, not the image's production/flash certification or the unproven recovery status. No firmware write has been performed.
+
 | Gate | State | Required evidence |
 | --- | --- | --- |
 | Source regression | Latest recorded full workspace suite passes; clean-clone CI added | Source tests, shell syntax and tracked-file hygiene |
