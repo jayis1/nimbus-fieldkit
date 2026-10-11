@@ -26,6 +26,8 @@ The raw offline ext3 candidate therefore is **not** the payload expected by the 
 
 ## Remaining recovery gates
 
+Further read-only startup inspection found `/etc/rc.d/rc.conf` schedules `nimbus-last`, whose `start` action unconditionally invokes `/opt/qsi/scripts/upgrade_firmware.sh`. Installed rescue must not be treated as a passive backup/inspection shell: updater side effects may begin during boot, before management access. No rescue boot was performed. See [consistent-capture review](EXPERIMENTAL-DEPLOYMENT.md#consistent-capture-feasibility-review) for the normal kernel's watchdog constraints and pending read-only capability inventory.
+
 1. Pin and verify the physical unit's installed bootloader/partition configuration and rescue invocation procedure independently.
 2. Review the relevant package scripts, including failure paths and calibration/settings preservation, before building a deployment container.
 3. Establish access during failed boot and validate rescue on recoverable test hardware, with stable power and an independently usable restore route.

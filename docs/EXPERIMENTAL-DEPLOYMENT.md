@@ -42,9 +42,39 @@ python3 scripts/backup-pretrial.py --host 172.16.10.178
 
 Run this from the PC's SanDisk project directory while USB data remains disconnected and uploads/settings/media writes are stopped. Enter the SSH key passphrase locally if requested. Defaults use the existing dedicated `~/.ssh/nimbus-admin-ed25519` identity and `~/.ssh/nimbus-test-known-hosts`; no password fallback or host-check bypass is allowed. At least 1 GiB free PC storage is required. The overall transfer has a 30-minute bound; incomplete files/staging are retained for private inspection, not overwritten or silently resumed.
 
-Artifacts are `boot-area.bin`, `settings.bin`, `rootfs.bin`, `fwpool.bin`, `wl1271-nvs.bin`, `stock-web.tar`, and `partitions.txt`, plus private transfer log/checksums/manifest. The first four include 475 MiB of raw system regions; user media and the rest of the disk are not a full-disk backup. Stream frame/size/hash mismatches stop the transfer. A complete manifest explicitly retains `filesystem_consistency_verified: false`, `restore_tested: false` and `flash_authorized: false` until independent offline/recovery checks establish otherwise. New physical backup results are still pending.
+Artifacts are `boot-area.bin`, `settings.bin`, `rootfs.bin`, `fwpool.bin`, `wl1271-nvs.bin`, `stock-web.tar`, and `partitions.txt`, plus private transfer log/checksums/manifest. The first four include 475 MiB of raw system regions; user media and the rest of the disk are not a full-disk backup. Stream frame/size/hash mismatches stop the transfer. A complete manifest explicitly retains `filesystem_consistency_verified: false`, `restore_tested: false` and `flash_authorized: false` until independent offline/recovery checks establish otherwise.
 
-Backup-helper checkpoint: **115 local tests pass**, including the complete seven-artifact shell protocol on small regular-file fixtures, binary framing/hash/truncation checks, private file modes and refusal to overwrite earlier backups. These fixtures never read hardware. The helper has not yet transferred the physical drive's new backup set.
+Backup-helper checkpoint: **115 local tests pass**, including the complete seven-artifact shell protocol on small regular-file fixtures, binary framing/hash/truncation checks, private file modes and refusal to overwrite earlier backups. These fixtures never read hardware.
+
+#### Physical backup review — 2026-10-11
+
+The user completed the new seven-artifact transfer into private host directory `.private-backups/nimbus-pretrial-20261011-062537/`. Independent host review verified every artifact's manifest size, SHA-256 and mode 0600. Local read-only `e2fsck -f -n` checks returned 0 for settings and firmware pool, but 4 for rootfs, with skipped journal recovery and allocation-count mismatches. These are checks on regular host files, not live block devices.
+
+To distinguish pending journal state from deeper snapshot inconsistency, the original rootfs backup was copied to a new private regular file `rootfs-journal-review-v1.bin`. Journal-only replay (`e2fsck -p -E journal_only`) on that copy returned 0. A subsequent read-only full check returned **12** (uncorrected errors plus operational failure), reporting multiply-claimed blocks, invalid inode metadata and an invalid `.` directory inode before aborting. This derived copy is **not a validated restore image**, and no additional repair was attempted. The original backup hash was reverified unchanged; all original artifacts and earlier backup sets remain preserved. Private logs and `ROOTFS-JOURNAL-REVIEW-v1.json` retain the review evidence locally.
+
+Both kernel and installed rescue uImages in the fresh boot-area backup passed header/payload CRC checks and matched the previously observed labels, offsets and lengths. That is integrity evidence, not recovery or authenticity validation.
+
+**Rollback blocker:** transferred bytes are verified, but the current raw rootfs capture is not a consistent, tested restoration artifact. A live capture can produce these findings; they do not establish that the running drive has the same errors. Do not run repair against the live root partition or treat further host-copy repair as evidence of recoverability. Review a quiesced capture route (including whether freeze/unfreeze is safely supported) or a separately reviewed offline recovery capture before relying on rootfs rollback. Neither route has been established or authorized for execution. Stable trial power and the update/recovery path remain unresolved. No firmware write, live filesystem repair or deployment occurred.
+
+#### Consistent-capture feasibility review
+
+Offline decoding of the installed normal kernel's embedded config found `CONFIG_IKCONFIG=y`, `CONFIG_IKCONFIG_PROC=y`, `CONFIG_EXT3_FS=y`, `CONFIG_JBD=y`, `CONFIG_WATCHDOG=y`, `CONFIG_WATCHDOG_NOWAYOUT=y` and `CONFIG_MXC_WATCHDOG=y`. The stock 3.04 rootfs archive includes `/sbin/fsfreeze`. This establishes build/tool presence, **not** whether the watchdog is active, its timeout, or whether a freeze is safe. A nowayout watchdog cannot be disabled once activated through its ordinary close path. Do not open `/dev/watchdog` to inspect it: opening can activate it.
+
+The installed rescue's `/etc/rc.d/rc.conf` includes `nimbus-last` in its startup sequence; `/etc/rc.d/init.d/nimbus-last start` invokes `/opt/qsi/scripts/upgrade_firmware.sh` unconditionally. Rescue is therefore **not an established passive capture shell**. Booting it for inventory can execute the destructive updater path before an operator gains access. No rescue boot is proposed as a diagnostic.
+
+`device/capture-capability-preflight.sh` reports only selected RAM/mount/config/symbol metadata, tool hashes, watchdog node presence and available watchdog sysfs attributes, and process names without arguments. It never invokes `fsfreeze`, opens a watchdog device, changes mounts or executes rescue/updater code. Kernel symbol addresses are suppressed. Missing metadata/process names cannot certify the watchdog inactive. Run from the trusted PC project:
+
+```sh
+ssh -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
+  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
+  -p 2224 root@172.16.10.178 'sh -s' \
+  < device/capture-capability-preflight.sh
+```
+
+A future freeze-based capture would need an independently bounded native thaw path with its executable/data resident outside the frozen filesystem, watchdog handling that does not assume it can be disabled, and tests for SSH loss, blocked IO, signals and failed thaw. A remote shell `trap` plus a host timeout is insufficient: host timeout can terminate SSH while leaving the filesystem frozen, and thaw processes can themselves block on frozen-root IO. Available RAM must be evaluated before suggesting tmpfs staging of the 256 MiB rootfs; reported free/cache totals are not reserved memory. No freeze helper or capture command is authorized or implemented here. Review these constraints against the physical capability output before selecting a capture route.
+
+Capability-helper checkpoint: **118 local tests pass**, including non-execution of a fixture freeze tool, unchanged fixture files, suppressed kernel symbol addresses and refusal on active USB export. Physical capability output remains pending; v4 image artifacts are unchanged.
 
 ### 3. Review the complete deployment path
 
