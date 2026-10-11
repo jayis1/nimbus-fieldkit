@@ -107,7 +107,13 @@ class UnifiedTests(unittest.TestCase):
                     continue
                 output=web/member.name;output.parent.mkdir(parents=True,exist_ok=True)
                 output.write_bytes(archive.extractfile(member).read())
+        warning_spec = importlib.util.spec_from_file_location('browser_warning_fix', ROOT/'scripts/package-flash-warning-fix.py')
+        warning_fix = importlib.util.module_from_spec(warning_spec); warning_spec.loader.exec_module(warning_fix)
+        controller = web/'data/js/t4u.controller.js'
+        controller.write_bytes(warning_fix.patch_controller(controller.read_bytes()))
         (web/'index.html').write_bytes(browser_files['index.html'].replace(b'</body>',b'<script src="/browser-test.js"></script></body>'))
+        page = web/'index.html'
+        page.write_bytes(page.read_bytes().replace(b'<head>', b'<head><script>Object.defineProperty(navigator,"userAgent",{value:"Mozilla/5.0 Firefox/128.0"});</script>', 1))
         for name, content in browser_files.items():
             if name.startswith('fieldkit-v'):
                 output=web/'data'/name;output.parent.mkdir(parents=True,exist_ok=True);output.write_bytes(content)
@@ -124,6 +130,8 @@ class UnifiedTests(unittest.TestCase):
         (web/'browser-test.js').write_text('''
           (async()=>{
             const checks=[];
+            checks.push(!document.body.textContent.includes('Please install Adobe'));
+            checks.push(!document.body.textContent.includes('Your browser needs Flash'));
             document.getElementById('nimbus-global-theme').click();
             checks.push(document.documentElement.dataset.theme==='light');
             document.getElementById('nimbus-global-theme').click();
@@ -215,6 +223,8 @@ class UnifiedTests(unittest.TestCase):
             jp.trigger({type:window.jQuery.jPlayer.event.error,jPlayer:{error:{type:window.jQuery.jPlayer.error.NO_SUPPORT}}});
             checks.push(document.getElementById('nimbus-audio-feedback').textContent.includes('codec'));
             checks.push(!document.getElementById('nimbus-audio-feedback').textContent.includes('install Flash'));
+            checks.push(!document.body.textContent.includes('Please install Adobe'));
+            checks.push(!document.body.textContent.includes('Your browser needs Flash'));
             document.body.dataset.unifiedTest=checks.every(Boolean)?'passed':JSON.stringify(checks);
             document.getElementById('btnNimbusFieldKit').click();
             surface.querySelector('[data-view="overview"]').click();

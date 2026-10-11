@@ -104,6 +104,11 @@ def build(args):
     spec.loader.exec_module(unified)
     ui = output / 'unified-source.tar'
     unified.build(web, ui, ROOT / 'build/nimbus-unified-v05.tar')
+    warning_spec = importlib.util.spec_from_file_location('flash_warning_fix', ROOT / 'scripts/package-flash-warning-fix.py')
+    warning_fix = importlib.util.module_from_spec(warning_spec)
+    warning_spec.loader.exec_module(warning_fix)
+    controller = root / 'nimbus/data/js/t4u.controller.js'
+    write(root, 'nimbus/data/js/t4u.controller.js', warning_fix.patch_controller(controller.read_bytes()))
     with tarfile.open(ui) as archive:
         for member in archive:
             if member.isfile() and (member.name == 'index.html' or member.name.startswith('fieldkit-v06/')):
@@ -187,10 +192,10 @@ def build(args):
                  'artifacts': {p.name: digest(p) for p in (image, root_tar, output / companion.name, ui)}}
     sources = set(unified.native.SOURCES.values()) | {
         'scripts/build-custom-image.py', 'scripts/rootfs-policy.py',
-        'scripts/build-unified-dashboard.py', 'scripts/package-native.py',
+        'scripts/build-unified-dashboard.py', 'scripts/package-native.py', 'scripts/package-flash-warning-fix.py',
         'scripts/provision-image.py', 'device/image-start.sh',
         'device/nimbus-sd-doctor.sh', 'device/retire-v04-homepage.sh',
-        'device/unified/bridge.js', 'device/unified/stock-dark.css',
+        'device/unified/bridge.js', 'device/unified/stock-dark.css', 'device/unified/audio-html5.js',
         'fieldkit/index.html', 'fieldkit/dashboard.css', 'fieldkit/dashboard.js',
         'docs/UNIFIED-DASHBOARD.md', 'docs/GAMEHACK-OPTIONAL-ENHANCEMENTS.md', 'docs/SECURITY-PLAN.md'}
     manifest['overlay_source_sha256'] = {name: digest(ROOT / name) for name in sorted(sources)}
