@@ -2,6 +2,7 @@ import functools
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -38,7 +39,8 @@ class UnifiedTests(unittest.TestCase):
         ids = lambda value: re.findall(r'id=["\']([^"\']+)', value)
         self.assertTrue(set(ids(self.original)).issubset(ids(page)))
         scripts = lambda value: re.findall(r'<script[^>]*src=["\']([^"\']+)', value)
-        self.assertEqual(scripts(page)[:-1], scripts(self.original))
+        self.assertEqual(scripts(page)[:-2], scripts(self.original))
+        self.assertEqual(scripts(page)[-2:], ['/data/fieldkit-v05/audio-html5.js', '/data/fieldkit-v05/bridge.js'])
         for identifier in ('btnUpload', 'btnDownload', 'btnDel', 'btnNew', 'btnFolderView', 'btnPhotosView', 'btnVideosView', 'btnMusicView', 'btnSetting', 'setting-connect-to-internet-popup', 'setting-format-nimbus', 'setting-check-firmware-upgrade'):
             self.assertIn(identifier, ids(page))
         self.assertIn('btnNimbusFieldKit', page)
@@ -114,6 +116,11 @@ class UnifiedTests(unittest.TestCase):
                   'memory':{'total_bytes':128000000,'reclaimable_estimate_bytes':64000000},'network':{'gateway':'172.16.10.254','uplink':'wlan1','interfaces':[],'subnets':[]},
                   'features':[{'id':name,'enabled':True,'available':True,'reason':'Test fixture'} for name in ('network_health','watchdog','speed_tests','backup_vault','offline_toolbox','storage_alerts','file_sync','pi_jobs','local_git','encrypted_archives')],'vault':[]}
         state=web/'storage/nimbus-unified-v05/native/dashboard/state.json';state.parent.mkdir(parents=True);state.write_text(json.dumps(snapshot))
+        import wave
+        music = web/'storage/audio fixture #1.WAV'
+        with wave.open(str(music), 'wb') as audio:
+            audio.setnchannels(1); audio.setsampwidth(2); audio.setframerate(8000)
+            audio.writeframes(b'\0\0' * 8000)
         (web/'browser-test.js').write_text('''
           (async()=>{
             const checks=[];
@@ -181,6 +188,33 @@ class UnifiedTests(unittest.TestCase):
               return events && events.click && events.click.length>=1;
             }));
             checks.push(document.querySelectorAll('iframe').length===0);
+            // Real vendor jPlayer + HTML5 adapter, served locally with synthetic PCM.
+            checks.push(!!window.NIMBUS_HTML5_AUDIO);
+            const song={path:'/storage/audio fixture #1.WAV', songname:'Fixture', artist:'Fixture', albumname:'Fixture', albumphoto:'/fixture.png'};
+            const mapped=NIMBUS_HTML5_AUDIO.media(song);
+            checks.push(mapped.track.wav==='/storage/audio%20fixture%20%231.WAV' && song.wav===undefined);
+            checks.push(['javascript:bad','https://example.com/a.mp3','/storage/../a.mp3','/storage/%2e%2e/a.mp3'].every(path=>{
+              try {NIMBUS_HTML5_AUDIO.media({path});return false;}catch(_){return true;}
+            }));
+            AudioPlayer.playlist=[song];AudioPlayer.onplay=()=>{};
+            AudioPlayer.init('#audioComponents', {playlist:[song]});
+            for(let i=0;i<80 && !AudioPlayer.inited;i++)await new Promise(resolve=>setTimeout(resolve,25));
+            const jp=window.jQuery('#audioComponents');
+            checks.push(jp.jPlayer('option','solution')==='html');
+            const nativeAudio=document.querySelector('#audioComponents audio');
+            checks.push(!!nativeAudio);
+            if(nativeAudio) {
+              nativeAudio.load();
+              for(let i=0;i<80 && nativeAudio.readyState<2;i++)await new Promise(resolve=>setTimeout(resolve,25));
+              checks.push(nativeAudio.readyState>=2 && nativeAudio.duration===1);
+              await nativeAudio.play();checks.push(!nativeAudio.paused);
+              nativeAudio.currentTime=0.5;checks.push(nativeAudio.currentTime===0.5);
+              nativeAudio.pause();checks.push(nativeAudio.paused);
+            }
+            checks.push(document.querySelectorAll('#audioComponents object, #audioComponents embed').length===0);
+            jp.trigger({type:window.jQuery.jPlayer.event.error,jPlayer:{error:{type:window.jQuery.jPlayer.error.NO_SUPPORT}}});
+            checks.push(document.getElementById('nimbus-audio-feedback').textContent.includes('codec'));
+            checks.push(!document.getElementById('nimbus-audio-feedback').textContent.includes('install Flash'));
             document.body.dataset.unifiedTest=checks.every(Boolean)?'passed':JSON.stringify(checks);
             document.getElementById('btnNimbusFieldKit').click();
             surface.querySelector('[data-view="overview"]').click();
@@ -196,10 +230,10 @@ class UnifiedTests(unittest.TestCase):
         http=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(web)))
         thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
         try:
-            profile_root = '/tmp/opencode' if Path('/tmp/opencode').is_dir() else None
+            profile_root = os.environ.get('NIMBUS_BROWSER_TMPDIR') or ('/tmp/opencode' if Path('/tmp/opencode').is_dir() else None)
             with tempfile.TemporaryDirectory(dir=profile_root,prefix='unified-browser-') as profile:
                 screenshot = str(Path(profile_root or profile) / 'nimbus-unified-browser.png')
-                result=subprocess.run([shutil.which('google-chrome') or shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking',
+                result=subprocess.run([shutil.which('google-chrome') or shutil.which('chromium'),'--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking','--autoplay-policy=no-user-gesture-required',
                     '--no-first-run','--user-data-dir='+profile,'--window-size=1440,1050','--screenshot='+screenshot,'--virtual-time-budget=9000','--dump-dom',f'http://127.0.0.1:{http.server_port}/'],capture_output=True,text=True,timeout=40)
                 self.assertEqual(result.returncode,0,result.stderr[-2000:])
                 self.assertIn('data-unified-test="passed"',result.stdout)

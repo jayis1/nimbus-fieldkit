@@ -149,4 +149,6 @@ From the trusted PC, use the same start command above with remote command `'sh -
 
 Correction checkpoint: **130 local tests pass**, including preservation of the exact failure stage on a fixture retry and refusal of unrelated failures, PID artifacts and occupied ports. Native corrected-launch results remain pending.
 
+Subsequent user retry passed the exact-failure guards, preserved the original failed stage as `/tmp/nimbus-capture-ssh-v1.invalid-E` and reported a temporary live PID/listening entry on port 2225. Existing port 2224, hooks, keys, services and mounts were unchanged. This is startup evidence only: fresh pinned port-2225 login and writer inventory remain pending. Do not stop port 2224 based on this report alone. The additionally requested [HTML5 Music UI](HTML5-MUSIC.md) is prepared offline, not installed; it does not change the current capture/handover state.
+
 No remount trial helper is shipped by this review. Current images remain non-flash-certified, and installed rescue still automatically invokes its updater. Source review narrows the next experiment; it does not establish recoverability or authorize firmware writes.
