@@ -106,6 +106,28 @@ class DashboardTests(unittest.TestCase):
         self.assertNotEqual(self.dashboard('snapshot',check=False).returncode,0)
         self.assertEqual(target.read_text(),'do not overwrite')
 
+    def test_separate_data_does_not_execute_mutable_scripts(self):
+        data = self.root / 'data'; (data / 'dashboard').mkdir(parents=True)
+        (data / '.settings').mkdir()
+        (data / '.settings/network_health').write_text('on\n')
+        marker = self.root / 'unsafe-execution'
+        (data / 'nimbus-settings.sh').write_text(f'echo unsafe > "{marker}"\n')
+        (data / 'dashboard/snapshot.awk').write_text('BEGIN { print "wrong encoder" }')
+        self.env['NIMBUS_DATA_DIR'] = str(data)
+        self.dashboard('snapshot')
+        result = json.loads((data / 'dashboard/state.json').read_text())
+        self.assertEqual(result['schema'], 'nimbus-dashboard/v1')
+        self.assertTrue(next(f for f in result['features'] if f['id'] == 'network_health')['enabled'])
+        self.assertFalse(marker.exists())
+        self.assertFalse((self.install / 'dashboard/state.json').exists())
+
+    def test_data_parent_symlink_refused(self):
+        data = self.root / 'data'; (data / 'native/dashboard').mkdir(parents=True)
+        (self.root / 'link').symlink_to(data, target_is_directory=True)
+        self.env['NIMBUS_DATA_DIR'] = str(self.root / 'link/native')
+        self.assertNotEqual(self.dashboard('snapshot', check=False).returncode, 0)
+        self.assertFalse((data / 'native/dashboard/state.json').exists())
+
     def test_watch_requires_flags_and_is_bounded(self):
         self.assertNotEqual(self.dashboard('watch','1','5',check=False).returncode,0)
         self.setting('network_health','on'); self.setting('watchdog','on')

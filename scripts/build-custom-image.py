@@ -6,46 +6,31 @@ import importlib.util
 import io
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import shutil
+import stat
 import subprocess
-import sys
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 STOCK_HASH = '4dd2907ec920443855b221b1f67c5086e369b84861fb0a486d74da2c7671b203'
 SSH_HASH = '1bebface41ff6ad832d0b1299ff49aca0698529399054901d860b50a1bb0213c'
 STAMP = 1767225600
+spec = importlib.util.spec_from_file_location('rootfs_policy', ROOT / 'scripts/rootfs-policy.py')
+policy = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(policy)
+validate_members = policy.validate_members
 
 
 def digest(path):
+    if not stat.S_ISREG(Path(path).lstat().st_mode):
+        raise ValueError('Expected a regular local input, not a device/link.')
     with Path(path).open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def validate_members(members):
-    names = set()
-    symlinks = set()
-    regular = set()
-    for member in members:
-        path = PurePosixPath(member.name)
-        if path.is_absolute() or '..' in path.parts or not path.parts or member.name in names:
-            raise ValueError('Unsafe or duplicate archive path: ' + member.name)
-        if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
-            raise ValueError('Unsupported archive node: ' + member.name)
-        names.add(member.name)
-        if member.issym():
-            symlinks.add(member.name)
-        if member.isfile():
-            regular.add(member.name)
-    for member in members:
-        if any(str(parent) in symlinks for parent in PurePosixPath(member.name).parents):
-            raise ValueError('Archive writes through a symlink: ' + member.name)
-        if member.islnk() and member.linkname not in regular:
-            raise ValueError('Hardlink must reference a contained regular file.')
-
-
 def write(root, name, data, mode=0o644):
+    policy.canonical(name)
     path = root / name
     if any(parent.is_symlink() for parent in path.parents if parent != root.parent):
         raise ValueError('Overlay would traverse a symlink: ' + name)
@@ -78,14 +63,17 @@ def build(args):
         raise ValueError('Vendor rootfs hash does not match reviewed 3.04 input.')
     if digest(args.ssh_binary) != SSH_HASH:
         raise ValueError('SSH binary is not the tested interface-fail-closed candidate.')
+    companion = ROOT / 'build/gamehack-nimbus-library-staged-v1.tar'
+    if not companion.is_file() or companion.is_symlink():
+        raise ValueError('Build the staged GameHack source bundle first.')
     output = args.output.resolve()
-    if str(output).startswith('/dev/'):
+    if any(output == Path(p) or Path(p) in output.parents for p in ('/dev', '/proc', '/sys')):
         raise ValueError('Refusing device output.')
     output.mkdir(mode=0o700, parents=False, exist_ok=False)
     root = output / 'rootfs-tree'
     root.mkdir()
     with tarfile.open(args.stock_rootfs) as archive:
-        members = archive.getmembers()
+        members = policy.collect_members(archive)
         validate_members(members)
         # Pinned vendor archive; validated no write paths under symlinks.
         archive.extractall(root, members=members, filter='fully_trusted')
@@ -157,9 +145,6 @@ def build(args):
     write(root, str(once.relative_to(root)), text.encode(), 0o755)
     # Attach new handheld features as a separate source bundle, not executable
     # ARM64/Python applications placed on the ARMv7 SanDisk.
-    companion = ROOT / 'build/gamehack-nimbus-library-staged-v1.tar'
-    if not companion.is_file():
-        raise ValueError('Build the staged GameHack source bundle first.')
     shutil.copyfile(companion, output / companion.name)
     for script in ('opt/nimbus/image-start.sh', 'etc/rc.d/rc.local'):
         subprocess.run(['sh', '-n', str(root / script)], check=True)
@@ -167,6 +152,16 @@ def build(args):
     with tarfile.open(root_tar, 'w', format=tarfile.PAX_FORMAT) as archive:
         for path in sorted(root.rglob('*')):
             archive.add(path, arcname=str(path.relative_to(root)), recursive=False)
+    report = policy.audit(root_tar, private=bool(provisioning))
+    if not report['offline_policy_pass']:
+        raise ValueError('Offline rootfs policy checks failed; preserve staging for review.')
+    with tarfile.open(args.stock_rootfs) as stock:
+        vendor_modules = {m.name: hashlib.sha256(stock.extractfile(m).read()).hexdigest()
+                          for m in stock if m.isfile() and m.name.startswith('lib/modules/')}
+    if report['module_hashes'] != vendor_modules:
+        raise ValueError('Vendor module inventory/content changed; refusing candidate.')
+    report['vendor_module_hashes_match'] = True
+    (output / 'ROOTFS-POLICY.json').write_text(json.dumps(report, indent=2) + '\n')
     image = output / 'rootfs.ext3.candidate'
     with image.open('xb') as stream:
         stream.truncate(256 * 1024 * 1024)
@@ -182,12 +177,25 @@ def build(args):
         subprocess.run(['e2fsck', '-f', '-n', str(image)], check=True, stdout=log, stderr=subprocess.STDOUT)
     manifest = {'schema': 'nimbus-custom-rootfs/v1', 'flash_ready': False,
                 'boot_tested': False, 'recovery_tested': False, 'vendor_update_container': False,
-                'stock_rootfs_sha256': STOCK_HASH, 'ssh_sha256': SSH_HASH,
+                 'stock_rootfs_sha256': STOCK_HASH, 'ssh_sha256': SSH_HASH,
+                 'offline_policy_pass': True,
+                 'sd_access_policy': 'Preserve vendor read-only default; no automatic writable remount or lock override.',
                 'image_bytes': image.stat().st_size, 'removed_vendor_host_keys': removed,
                 'credentials': 'No personal keys/passwords/settings/backups imported; stock vendor accounts otherwise remain.',
                 'preserved': ['vendor kernel/modules', 'bootloader/rescue external to this image', 'partition layout external to this image', 'stock web handlers'],
-                'blocked': ['secure offline provisioning', 'recovery/restoration', 'native boot', 'SD write validation', 'GameHack downstream SSH access'],
+                 'blocked': ['native SSH/Wi-Fi provisioning validation', 'recovery/restoration', 'native boot', 'candidate SD policy validation', 'GameHack downstream SSH access', 'legacy-service and redistribution review'],
                  'artifacts': {p.name: digest(p) for p in (image, root_tar, output / companion.name, ui)}}
+    sources = set(unified.native.SOURCES.values()) | {
+        'scripts/build-custom-image.py', 'scripts/rootfs-policy.py',
+        'scripts/build-unified-dashboard.py', 'scripts/package-native.py',
+        'scripts/provision-image.py', 'device/image-start.sh',
+        'device/nimbus-sd-doctor.sh', 'device/retire-v04-homepage.sh',
+        'device/unified/bridge.js', 'device/unified/stock-dark.css',
+        'fieldkit/index.html', 'fieldkit/dashboard.css', 'fieldkit/dashboard.js',
+        'docs/UNIFIED-DASHBOARD.md', 'docs/GAMEHACK-OPTIONAL-ENHANCEMENTS.md', 'docs/SECURITY-PLAN.md'}
+    manifest['overlay_source_sha256'] = {name: digest(ROOT / name) for name in sorted(sources)}
+    manifest['previous_ui_bundle_sha256'] = digest(ROOT / 'build/nimbus-unified-v05.tar')
+    manifest['artifacts']['ROOTFS-POLICY.json'] = digest(output / 'ROOTFS-POLICY.json')
     if provisioning:
         manifest['credentials'] = 'PRIVATE per-device SSH identity; existing Wi-Fi settings remain external. Never redistribute.'
         manifest['private_per_device'] = True

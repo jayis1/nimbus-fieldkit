@@ -4,6 +4,7 @@ import shutil
 import subprocess
 from pathlib import Path
 import tarfile
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,32 @@ class CustomImageTests(unittest.TestCase):
         child = tarfile.TarInfo('etc/file')
         with self.assertRaises(ValueError):
             builder.validate_members([link, child])
+
+    def test_archive_aliases_and_non_directory_parents_refused(self):
+        for name in ('etc//file', './etc/file', 'etc/./file', 'etc/../file'):
+            with self.assertRaises(ValueError):
+                builder.validate_members([tarfile.TarInfo(name)])
+        directory = tarfile.TarInfo('etc'); directory.type = tarfile.DIRTYPE
+        alias = tarfile.TarInfo('etc/'); alias.type = tarfile.DIRTYPE
+        with self.assertRaises(ValueError):
+            builder.validate_members([directory, alias])
+        regular = tarfile.TarInfo('etc')
+        child = tarfile.TarInfo('etc/file')
+        with self.assertRaises(ValueError):
+            builder.validate_members([regular, child])
+
+    def test_overlay_paths_and_digest_links_refused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name in ('../escape', '/absolute', 'etc//file', './alias'):
+                with self.assertRaises(ValueError):
+                    builder.write(root, name, b'fixture')
+            (root / 'input').write_bytes(b'fixture')
+            (root / 'link').symlink_to(root / 'input')
+            with self.assertRaises(ValueError):
+                builder.digest(root / 'link')
+            with self.assertRaises(ValueError):
+                builder.digest(root)
 
     def test_candidate_gates_and_image_geometry(self):
         if not CANDIDATE.exists():
@@ -74,3 +101,31 @@ class CustomImageTests(unittest.TestCase):
                 result = subprocess.run(['debugfs', '-R', 'cat /' + name,
                                          str(CANDIDATE / 'rootfs.ext3.candidate')], capture_output=True, check=True)
                 self.assertEqual(result.stdout, archive.extractfile(name).read(), name)
+
+    def test_hardened_generic_and_private_archives_match_images(self):
+        candidates = [(ROOT / 'build/nimbus-custom-rootfs-candidate-v4', False),
+                      (ROOT / '.private-provisioning/drive-a-rootfs-candidate-v4', True)]
+        available = [(base, private) for base, private in candidates if base.exists()]
+        if not available or not shutil.which('debugfs'):
+            self.skipTest('Hardened local candidate/debugfs unavailable')
+        for base, private in available:
+            with self.subTest(private=private):
+                report = builder.policy.audit(base / 'rootfs.tar', private=private)
+                self.assertTrue(report['offline_policy_pass'])
+                manifest = json.loads((base / 'BUILD-MANIFEST.json').read_text())
+                self.assertFalse(manifest['flash_ready'])
+                self.assertFalse(manifest['boot_tested'])
+                self.assertFalse(manifest['recovery_tested'])
+                self.assertTrue(manifest['offline_policy_pass'])
+                stored = json.loads((base / 'ROOTFS-POLICY.json').read_text())
+                self.assertTrue(stored['vendor_module_hashes_match'])
+                with tarfile.open(base / 'rootfs.tar') as archive:
+                    names = ['opt/nimbus/image-start.sh', 'opt/nimbus/native/nimbus-dashboard.sh',
+                             'opt/nimbus/native/dashboard/snapshot.awk', 'etc/inetd.conf']
+                    if private:
+                        names += ['etc/nimbus/host-ed25519', 'etc/nimbus/authorized_keys']
+                    for name in names:
+                        result = subprocess.run(['debugfs', '-R', 'cat /' + name,
+                                                 str(base / 'rootfs.ext3.candidate')], capture_output=True, check=True)
+                        # Never print private bytes in assertion failure diagnostics.
+                        self.assertTrue(result.stdout == archive.extractfile(name).read(), 'Image/archive mismatch: ' + name)

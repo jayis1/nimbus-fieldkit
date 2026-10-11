@@ -3,15 +3,24 @@
 set -u
 umask 077
 BASE=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 2
-STATE="${NIMBUS_STATE_DIR:-$BASE/.settings}"
+DATA="${NIMBUS_DATA_DIR:-$BASE}"
+STATE="${NIMBUS_STATE_DIR:-$DATA/.settings}"
 PROC="${NIMBUS_PROC_DIR:-/proc}"
 POWER="${NIMBUS_POWER_DIR:-/sys/class/power_supply}"
 FEATURES='network_health watchdog speed_tests backup_vault offline_toolbox storage_alerts file_sync pi_jobs local_git encrypted_archives'
 fail() { printf '%s\n' "$1" >&2; exit 2; }
 enabled() { [ ! -L "$STATE" ] && [ -f "$STATE/$1" ] && [ ! -L "$STATE/$1" ] && [ "$(cat "$STATE/$1")" = on ]; }
 snapshot() {
-    [ -d "$BASE/dashboard" ] && [ ! -L "$BASE/dashboard" ] || fail 'Missing or symlink dashboard directory'
-    work="$BASE/dashboard/.publish-lock"
+    case "$DATA" in /*) :;; *) fail 'Use an absolute data directory';; esac
+    parent="$DATA"
+    while [ "$parent" != / ]; do
+        [ ! -L "$parent" ] || fail 'Refusing symlink data-path component'
+        parent=$(dirname "$parent")
+    done
+    [ -d "$DATA" ] && [ ! -L "$DATA" ] || fail 'Missing or symlink data directory'
+    [ -d "$DATA/dashboard" ] && [ ! -L "$DATA/dashboard" ] || fail 'Missing or symlink dashboard directory'
+    [ -f "$BASE/dashboard/snapshot.awk" ] && [ ! -L "$BASE/dashboard/snapshot.awk" ] || fail 'Missing trusted snapshot encoder'
+    work="$DATA/dashboard/.publish-lock"
     mkdir "$work" 2>/dev/null || fail 'Publisher busy or stale .publish-lock; review before retrying'
     trap 'rm -f "$work/features.tsv" "$work/vault.tsv" "$work/state.json"; rmdir "$work" 2>/dev/null' 0
     trap 'exit 1' 1 2 15
@@ -24,8 +33,8 @@ snapshot() {
     done
     : > "$work/vault.tsv"
     count=0
-    if [ ! -L "$BASE/vault" ]; then
-        for file in "$BASE"/vault/*; do
+    if [ ! -L "$DATA/vault" ]; then
+        for file in "$DATA"/vault/*; do
             [ -f "$file" ] && [ ! -L "$file" ] || continue
             name=$(basename "$file")
             case "$name" in *[!a-zA-Z0-9._-]*) continue;; esac
@@ -35,7 +44,7 @@ snapshot() {
             count=$((count + 1)); [ "$count" -lt 64 ] || break
         done
     fi
-    disk=$(df -k "$BASE" | awk '$2~/^[0-9]+$/&&$3~/^[0-9]+$/&&$4~/^[0-9]+$/ {print $2 " " $3 " " $4; exit}')
+    disk=$(df -k "$DATA" | awk '$2~/^[0-9]+$/&&$3~/^[0-9]+$/&&$4~/^[0-9]+$/ {print $2 " " $3 " " $4; exit}')
     set -- $disk
     [ "$#" -eq 3 ] || fail 'Cannot read storage metrics'
     battery_capacity=''; battery_status=Unknown
@@ -50,7 +59,7 @@ snapshot() {
     # Arguments are data, not shell expressions. The awk encoder escapes JSON strings.
     awk -f "$BASE/dashboard/snapshot.awk" \
         -v generated_at="$(date +%s)" -v publisher="${NIMBUS_PUBLISHER_MODE:-manual}" \
-        -v install_path="$BASE" -v hostname="$(hostname)" \
+        -v install_path="$DATA" -v hostname="$(hostname)" \
         -v disk_total="$1" -v disk_used="$2" -v disk_free="$3" \
         -v battery_capacity="$battery_capacity" -v battery_status="$battery_status" \
         -v uptime_file="$PROC/uptime" -v memory_file="$PROC/meminfo" \
@@ -58,9 +67,9 @@ snapshot() {
         -v features_file="$work/features.tsv" -v vault_file="$work/vault.tsv" -v tcp_file="$PROC/net/tcp" \
         "$PROC/uptime" "$PROC/meminfo" "$PROC/net/route" "$PROC/net/dev" \
         "$work/features.tsv" "$work/vault.tsv" "$PROC/net/tcp" > "$work/state.json" || fail 'Snapshot encoder failed'
-    [ ! -L "$BASE/dashboard/state.json" ] || fail 'Refusing a symlink snapshot'
-    if [ -e "$BASE/dashboard/state.json" ] && [ ! -f "$BASE/dashboard/state.json" ]; then fail 'Snapshot destination is not a regular file'; fi
-    mv -f "$work/state.json" "$BASE/dashboard/state.json" || fail 'Could not publish snapshot'
+    [ ! -L "$DATA/dashboard/state.json" ] || fail 'Refusing a symlink snapshot'
+    if [ -e "$DATA/dashboard/state.json" ] && [ ! -f "$DATA/dashboard/state.json" ]; then fail 'Snapshot destination is not a regular file'; fi
+    mv -f "$work/state.json" "$DATA/dashboard/state.json" || fail 'Could not publish snapshot'
     rm -f "$work/features.tsv" "$work/vault.tsv"
     rmdir "$work" || fail 'Could not release publisher lock'
     trap - 0 1 2 15

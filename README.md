@@ -401,12 +401,13 @@ See [Native installation](device/NATIVE-INSTALL.md), [Unified integration](docs/
 ### Artifact
 
 ```text
-build/nimbus-custom-rootfs-candidate-v1/
+build/nimbus-custom-rootfs-candidate-v4/
 ├── rootfs.ext3.candidate
 ├── rootfs.tar
 ├── gamehack-nimbus-library-staged-v1.tar
 ├── unified-source.tar
 ├── BUILD-MANIFEST.json
+├── ROOTFS-POLICY.json
 ├── SHA256SUMS
 ├── mkfs.log
 ├── fsck-readonly.log
@@ -425,6 +426,7 @@ The ext3 candidate is **268,435,456 bytes / 256MiB**, matching the reviewed root
 - Toolkit scripts and diagnostics.
 - WPA2-AES defaults/first-use mode selection.
 - Separate staged handheld enhancement source bundle.
+- Rootfs-resident boot publisher with media used as data, strict SSH permission checks, and bounded archive/policy validation. See [v4 hardening](docs/OFFLINE-CANDIDATE-HARDENING.md).
 
 Vendor binaries/modules and stock handlers are preserved. Kernel, bootloader, rescue, settings partition, media partition and physical partition layout are **outside this rootfs image**, not replaced by it.
 
@@ -447,7 +449,7 @@ Example for the documented development workspace:
 fakeroot python3 scripts/build-custom-image.py \
   --stock-rootfs /tmp/opencode/sandisk-fw-3-04/rootfs_nimbus_v3.04.tar \
   --ssh-binary /tmp/opencode/nimbus-ssh-review/dropbear-2026.94/dropbearmulti \
-  --output build/nimbus-custom-rootfs-candidate-v1
+  --output build/nimbus-custom-rootfs-candidate-v4
 ```
 
 The output directory must not already exist. Preserve prior candidates rather than overwriting them. Fakeroot preserves archive ownership metadata without requiring host root privileges; the builder does not mount the image or write a physical device.
@@ -457,7 +459,7 @@ The recorded toolchain was Bootlin ARM EABI/musl 2026.08-1. Its matching Buildro
 ### Check artifacts locally
 
 ```sh
-cd build/nimbus-custom-rootfs-candidate-v1
+cd build/nimbus-custom-rootfs-candidate-v4
 sha256sum -c SHA256SUMS
 ```
 
@@ -484,6 +486,8 @@ python3 scripts/inspect-firmware.py /path/to/sandiskmediafirmware-3-04.img
 ```
 
 Passing the reproduced wrapper checks is not cryptographic authentication or flash approval. See [Firmware feasibility](docs/CUSTOM-FIRMWARE-FEASIBILITY.md) and [Custom candidate](docs/CUSTOM-ROOTFS-CANDIDATE.md).
+
+Prior candidates are preserved for research, not current delivery. v4 preserves the vendor SD read-only default and adds no automatic writable remount. Private per-device v4 builds live under ignored `.private-provisioning/`, contain SSH identity material and must never be publicly redistributed. No spare test drive or established recovery console is available; native boot/recovery remain blocked.
 
 ## Testing and validation
 
@@ -575,6 +579,7 @@ The associated GameHack staging tree is a separate project/workspace. Its newer 
 | Vendor firmware inspection | [FIRMWARE-3.04-INSPECTION.md](docs/FIRMWARE-3.04-INSPECTION.md) |
 | Recovery/update feasibility | [CUSTOM-FIRMWARE-FEASIBILITY.md](docs/CUSTOM-FIRMWARE-FEASIBILITY.md) |
 | Built rootfs candidate and provisioning gates | [CUSTOM-ROOTFS-CANDIDATE.md](docs/CUSTOM-ROOTFS-CANDIDATE.md) |
+| Current v4 offline startup/archive hardening | [OFFLINE-CANDIDATE-HARDENING.md](docs/OFFLINE-CANDIDATE-HARDENING.md) |
 | Public preview assets and production blockers | [PRODUCTION-READINESS.md](docs/PRODUCTION-READINESS.md) |
 | Planned two-part GameHack/SanDisk Android/iOS companion | [MOBILE-COMPANION-APPS.md](docs/MOBILE-COMPANION-APPS.md) |
 

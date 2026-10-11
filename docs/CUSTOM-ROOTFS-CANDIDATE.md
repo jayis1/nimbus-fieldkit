@@ -1,6 +1,6 @@
-# Custom SanDisk rootfs candidate v1 — offline only
+# Custom SanDisk rootfs candidates — offline only
 
-Output: `build/nimbus-custom-rootfs-candidate-v1/`.
+Current hardened output: `build/nimbus-custom-rootfs-candidate-v4/`. See [v4 hardening](OFFLINE-CANDIDATE-HARDENING.md) for the current startup/security changes, hashes and limits. The v1 evidence below is retained as historical build evidence, not a current delivery recommendation.
 
 Follow-up: [private offline SSH provisioning](OFFLINE-PROVISIONING.md) can create a separately staged per-device candidate under ignored `.private-provisioning/`. That candidate contains a private host key and must never be publicly redistributed. The original generic v1 remains unchanged. [Installed rescue review](RECOVERY-IMAGE-REVIEW.md) identifies the installed rescue in private backups and explains why the raw ext3 artifact is not a vendor update payload. Boot/recovery gates still block flashing.
 

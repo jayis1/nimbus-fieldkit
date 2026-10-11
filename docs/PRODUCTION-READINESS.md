@@ -6,12 +6,14 @@ Production-preparation source checkpoint: 84 local tests pass. GitHub Actions ru
 
 Offline provisioning/rescue follow-up: 90 local tests pass, including real host-key generation/uniqueness, permissions, tamper rejection and boot-image CRC fixtures. Clean CI skips the real key-tool test unless a trusted native Dropbear key utility is provided; key generation is not a hardware boot test. Existing source-preview downloads remain tied to their recorded earlier commits.
 
+Current offline hardening work produced separate generic/private v4 candidates with rootfs-resident boot code, strict SSH key permissions, bounded archive checks and a selected-file policy report. **106 local tests pass**; integrity audits, inode metadata checks and read-only fsck passed for both builds. See [v4 hardening](OFFLINE-CANDIDATE-HARDENING.md). No spare test drive is available and recovery-console access is not established; neither v4 image is approved for native deployment.
+
 ## Current readiness gates
 
 | Gate | State | Required evidence |
 | --- | --- | --- |
 | Source regression | Latest recorded full workspace suite passes; clean-clone CI added | Source tests, shell syntax and tracked-file hygiene |
-| Generic offline image integrity | Passed for local v1 | SHA-256 list, geometry, offline fsck |
+| Offline image integrity/policy | Passed for local generic/private v4 builds | SHA-256 list, geometry, offline fsck, archive/image checks and vendor modules; not native boot evidence |
 | Settings interaction | Basic live usability PASSED by user report; served hashes verified | User confirms Settings work after patch; not an exhaustive control/destructive-operation test |
 | Live SSH/Telnet/WPA2 transition | User verified on installed device | Separate from candidate-image boot/provisioning |
 | Secure provisioning | Offline SSH personalization implemented; native/Wi-Fi gates BLOCKED | Unique host keys, authorized clients, pinned identity, private configuration and tested access before removing fallback |
@@ -24,7 +26,7 @@ Offline provisioning/rescue follow-up: 90 local tests pass, including real host-
 | Deployment/update path | BLOCKED | Reviewed format/partition preservation, abort behavior, power-loss and rollback considerations |
 | Two-part Android/iOS companion | Planned, not implemented | Independently paired GameHack/SanDisk APIs, optional shared workflows, real-device client tests, signing/distribution and compatibility matrix |
 
-`python3 scripts/audit-image-readiness.py build/nimbus-custom-rootfs-candidate-v1` produces a read-only integrity/blocker report. Exit 2 means artifacts pass integrity but are not release/flash approved; exit 1 means invalid/mismatched artifacts. The script never turns mutable manifest booleans into a hardware certification and never flashes or mounts anything.
+`python3 scripts/audit-image-readiness.py build/nimbus-custom-rootfs-candidate-v4` produces a read-only integrity/blocker report. Exit 2 means artifacts pass integrity but are not release/flash approved; exit 1 means invalid/mismatched artifacts. The script never turns mutable manifest booleans into a hardware certification and never flashes or mounts anything.
 
 ## Public preview assets
 
