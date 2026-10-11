@@ -59,7 +59,8 @@ class CaptureListenerTests(unittest.TestCase):
         text = SCRIPT.read_text()
         for prohibited in ('killall', 'kill -TERM', 'fw_setenv', 'mount -o', 'fsfreeze', '\ncp ', '2224 \\'):
             self.assertNotIn(prohibited, text)
-        self.assertIn('-F -E -l wlan1 -p 0.0.0.0:2225', text)
+        self.assertIn('-F -l wlan1 -p 0.0.0.0:2225', text)
+        self.assertNotIn('dropbear -F -E', text)
         self.assertIn('nohup setsid', text)
 
     def test_hash_mismatch_never_starts_listener(self):
@@ -81,3 +82,27 @@ class CaptureListenerTests(unittest.TestCase):
             self.assertEqual(stage.stat().st_mode & 0o777, 0o700)
             self.assertEqual((stage / 'listener.log').stat().st_mode & 0o777, 0o600)
             self.assertIn('FIXTURE-BINARY-EXECUTED', (stage / 'listener.log').read_text())
+
+    def test_specific_retry_preserves_original_failure(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, tmp = self.fixture(Path(folder))
+            stage = tmp / 'nimbus-capture-ssh-v1'; stage.mkdir(mode=0o700)
+            log = stage / 'listener.log'; log.write_text('Invalid option -E\nfixture help\n'); log.chmod(0o600)
+            result = subprocess.run(['sh', str(path), '--retry-invalid-E'], capture_output=True, text=True, timeout=15)
+            self.assertNotEqual(result.returncode, 0)  # Harmless fixture executable exits 99.
+            self.assertIn('Specific failed stage preserved', result.stdout)
+            self.assertEqual((tmp / 'nimbus-capture-ssh-v1.invalid-E/listener.log').read_text(), 'Invalid option -E\nfixture help\n')
+
+    def test_retry_rejects_unrelated_failure_pid_or_occupied_port(self):
+        for scenario in ('unrelated', 'pid', 'occupied'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as folder:
+                path, tmp = self.fixture(Path(folder), occupied=scenario == 'occupied')
+                stage = tmp / 'nimbus-capture-ssh-v1'; stage.mkdir(mode=0o700)
+                log = stage / 'listener.log'
+                log.write_text('other failure\n' if scenario == 'unrelated' else 'Invalid option -E\n'); log.chmod(0o600)
+                if scenario == 'pid': (stage / 'listener.pid').write_text('123\n')
+                result = subprocess.run(['sh', str(path), '--retry-invalid-E'], capture_output=True, text=True, timeout=10)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn('Starting OPTIONAL', result.stdout)
+                self.assertTrue(log.exists())
+                self.assertFalse((tmp / 'nimbus-capture-ssh-v1.invalid-E').exists())

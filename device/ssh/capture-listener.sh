@@ -6,7 +6,7 @@ LC_ALL=C
 export PATH LC_ALL
 umask 077
 mode=${1:---check}
-case "$mode" in --check|--start) :;; *) echo 'Use --check or --start'; exit 1;; esac
+case "$mode" in --check|--start|--retry-invalid-E) :;; *) echo 'Use --check, --start or --retry-invalid-E'; exit 1;; esac
 [ "$#" -le 1 ] || exit 1
 fail() { echo "$1"; exit 1; }
 [ "$(id -u)" = 0 ] || fail 'Authorized root SSH session required'
@@ -33,7 +33,16 @@ printf '%s  %s\n' "$hash" "$binary" | sha256sum -c - >/dev/null || fail 'SSH bin
 [ -d /sys/class/net/wlan1 ] || fail 'Management interface unavailable'
 [ -r /proc/modules ] && ! grep -q '^g_file_storage ' /proc/modules || fail 'USB export active or state unavailable'
 awk '$2 == "/tmp" && $3 == "tmpfs" && $4 ~ /(^|,)rw(,|$)/ {n++} END {exit n != 1}' /proc/mounts || fail 'Expected writable tmpfs /tmp not established'
-[ ! -e "$stage" ] && [ ! -L "$stage" ] || fail 'Prior temporary stage exists; inspect it rather than rerun'
+if [ "$mode" = --retry-invalid-E ]; then
+    [ -d "$stage" ] && [ ! -L "$stage" ] &&
+    [ "$(stat -c '%u:%g:%a' "$stage")" = '0:0:700' ] || fail 'Expected private failed stage not established'
+    private_file "$stage/listener.log" || fail 'Expected private failure log not established'
+    grep -q '^Invalid option -E$' "$stage/listener.log" || fail 'Specific unsupported -E failure not recorded; no retry'
+    [ ! -e "$stage/listener.pid" ] && [ ! -L "$stage/listener.pid" ] || fail 'PID artifact present; inspect rather than retry'
+    [ ! -e "$stage.invalid-E" ] && [ ! -L "$stage.invalid-E" ] || fail 'Prior failure archive exists; no overwrite'
+else
+    [ ! -e "$stage" ] && [ ! -L "$stage" ] || fail 'Prior temporary stage exists; inspect it rather than rerun'
+fi
 [ -r /proc/net/tcp ] || fail 'Listener metadata unavailable'
 for table in /proc/net/tcp /proc/net/tcp6; do
     [ -r "$table" ] || continue
@@ -46,11 +55,16 @@ if [ "$mode" = --check ]; then
     echo 'Check-only: no staging, listener, signal, mount change or reboot performed'
     exit 0
 fi
+if [ "$mode" = --retry-invalid-E ]; then
+    mv "$stage" "$stage.invalid-E"
+    echo 'Specific failed stage preserved privately as /tmp/nimbus-capture-ssh-v1.invalid-E'
+fi
 mkdir -m 700 "$stage"
 echo 'Starting OPTIONAL temporary key-only listener on wlan1 TCP 2225'
 # nohup protects against the starting SSH session closing; setsid detaches it.
 # Same existing identity/authorized-key files, with no key copies or boot edits.
-nohup setsid "$binary" dropbear -F -E -l wlan1 -p 0.0.0.0:2225 \
+# This pinned build defines DISABLE_SYSLOG: -E is unsupported, stderr is default.
+nohup setsid "$binary" dropbear -F -l wlan1 -p 0.0.0.0:2225 \
     -r "$base/host-ed25519" -D "$base/auth" -P "$stage/listener.pid" -T 3 -I 600 \
     </dev/null >"$stage/listener.log" 2>&1 &
 tries=0

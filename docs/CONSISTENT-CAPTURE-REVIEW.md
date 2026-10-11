@@ -137,4 +137,16 @@ Then run the root-writer inventory through port 2225 with that same alias, and k
 
 Temporary-listener helper checkpoint: **128 local tests pass**, including check-only no-launch/no-staging behavior, refusal of unsafe key metadata, changed binary hash, occupied port and prior staging, and private retained staging after a failed harmless fixture launch. No fixture launches an SSH server or touches the drive. These tests do not establish native handover or remount safety.
 
+### First launch failure and guarded correction
+
+The user's first explicit `--start` passed checks and created private tmpfs staging, but did not verify a live PID/listening entry within the helper's wait. Do not treat this as a successful management handover or blindly rerun `--start`. Port 2224 and vendor services were not stopped.
+
+Offline review identified a helper mistake: it supplied **`-E`**, which is absent from the option parser when `DISABLE_SYSLOG` is defined. The local reviewed build's `config.h` defines `DISABLE_SYSLOG 1`; its binary SHA-256 exactly matches the installed pinned binary hash used by the helper. In this configuration stderr logging is already the default. The corrected launcher uses **`-F` without `-E`**. Initial fixture tests checked the launcher protocol but did not catch this native build-option incompatibility; those tests were not native validation.
+
+The opt-in `--retry-invalid-E` action is narrowly guarded: it requires a real root-owned mode-0700 stage, a real private mode-0600 log containing the exact `Invalid option -E` diagnostic, **no PID artifact**, no existing failure-archive destination, and no port-2225 listener in IPv4/IPv6 tables. All original binary/key/interface/tmpfs/USB checks still apply. Only then it renames the failed stage to `/tmp/nimbus-capture-ssh-v1.invalid-E` (retaining it rather than deleting/overwriting), creates a fresh private stage and attempts the corrected listener. Unrelated failures, PID artifacts and occupied ports refuse without archive/launch. No old management process is signalled.
+
+From the trusted PC, use the same start command above with remote command `'sh -s -- --retry-invalid-E'` instead of `'sh -s -- --start'`. This is an explicit temporary-listener retry, not read-only inventory. A refusal requires inspection, not loosening a guard. A corrected launch still needs the fresh pinned port-2225 login and root-writer checks before any subsequent handover. No live retry or remount has yet occurred.
+
+Correction checkpoint: **130 local tests pass**, including preservation of the exact failure stage on a fixture retry and refusal of unrelated failures, PID artifacts and occupied ports. Native corrected-launch results remain pending.
+
 No remount trial helper is shipped by this review. Current images remain non-flash-certified, and installed rescue still automatically invokes its updater. Source review narrows the next experiment; it does not establish recoverability or authorize firmware writes.
