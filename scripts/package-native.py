@@ -13,17 +13,22 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE_MTIME = 1767225600  # 2026-01-01 UTC
 SOURCES = {
     'nimbus-agent.sh': 'device/nimbus-agent.sh',
+    'nimbus-companion-status.sh': 'device/nimbus-companion-status.sh',
     'nimbus-settings.sh': 'device/nimbus-settings.sh',
     'nimbus-dashboard.sh': 'device/nimbus-dashboard.sh',
+    'nimbus-media-guard.sh': 'device/nimbus-media-guard.sh',
     'dashboard/index.html': 'fieldkit/index.html',
     'dashboard/dashboard.css': 'fieldkit/dashboard.css',
     'dashboard/dashboard.js': 'fieldkit/dashboard.js',
+    'dashboard/battery.js': 'device/unified/battery.js',
     'dashboard/snapshot.awk': 'device/dashboard/snapshot.awk',
     'device-inventory.sh': 'scripts/device-inventory.sh',
     'NATIVE-INSTALL.md': 'device/NATIVE-INSTALL.md',
     'docs/FEATURES.md': 'docs/FEATURES.md',
+    'docs/GAMEHACK-COMPANION-STATUS.md': 'docs/GAMEHACK-COMPANION-STATUS.md',
     'docs/TOGGLES.md': 'docs/TOGGLES.md',
     'docs/DASHBOARD.md': 'docs/DASHBOARD.md',
+    'docs/MEDIA-OWNERSHIP-GUARD.md': 'docs/MEDIA-OWNERSHIP-GUARD.md',
     'docs/FIRMWARE-3.04-INSPECTION.md': 'docs/FIRMWARE-3.04-INSPECTION.md',
 }
 

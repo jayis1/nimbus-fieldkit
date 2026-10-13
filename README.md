@@ -4,9 +4,21 @@
 
 Nimbus FieldKit repurposes the **SanDisk Connect Wireless Media Drive** as an optional Wi-Fi gateway, shared-storage device, and field node for the **GameHack Zero** ecosystem.
 
-The project retains the vendor's file browser, media views, uploads, and administration interface while integrating a dark-mode toolkit into the **original homepage**. GameHack provides controller-first interaction and application execution; the Pi Zero W remains a separate USB worker.
+The project retains the vendor's file browser, media views, uploads, and administration interface while integrating a dark-mode toolkit into the **original homepage**. GameHack uses onboard Wi-Fi and pinned SSH to managed-mode Pi A; A's own USB/data link controls Pi B. This target chain still needs native integration qualification.
 
 **This is an independent development project—not an official SanDisk firmware release or a supported security upgrade.**
+
+**Feature freeze:** no new features until the existing agreed scope is implemented,
+confirmed and qualified for the unofficial 64 GB Media Drive update. See the
+[frozen scope and acceptance ledger](docs/FIRMWARE-FEATURE-FREEZE.md).
+
+**Requested shareable replacement firmware:** see the
+[release scope and remaining gates](docs/SHAREABLE-FIRMWARE-RELEASE.md). Existing
+rootfs candidates are not complete installable firmware; personal drive clones
+and private provisioning material are never public release inputs.
+
+This update is **source/documentation only**. See
+[publication boundaries and anonymized examples](docs/PUBLICATION-NOTES.md).
 
 **Public preview:** [v0.1.0-preview.1](https://github.com/jayis1/nimbus-fieldkit/releases/tag/v0.1.0-preview.1) is a source/customization-overlay prerelease, **not an installable firmware image**. Full vendor-based rootfs images remain local pending redistribution and deployment review. See [production readiness](docs/PRODUCTION-READINESS.md).
 
@@ -23,6 +35,7 @@ The project retains the vendor's file browser, media views, uploads, and adminis
 - [Project goals](#project-goals)
 - [Architecture and device roles](#architecture-and-device-roles)
 - [Current status](#current-status)
+- [Wardriving GO checkpoint](#wardriving-go-checkpoint)
 - [Unified SanDisk homepage](#unified-sandisk-homepage)
 - [Native toolkit and persistent switches](#native-toolkit-and-persistent-switches)
 - [Optional GameHack enhancements](#optional-gamehack-enhancements)
@@ -52,7 +65,7 @@ The project retains the vendor's file browser, media views, uploads, and adminis
 
 ### Explicit non-goals
 
-- Monitor-mode, packet-injection, or deauthentication features in this toolkit.
+- Switching SanDisk/control radios into monitor mode; packet injection or deauthentication.
 - Adding NFC, Sub-GHz, or IR hardware through software.
 - An unauthenticated browser shell or arbitrary remote-command API.
 - Internet-exposed device administration.
@@ -75,9 +88,13 @@ SanDisk Connect Wireless Media Drive
      ▼
 GameHack Zero handheld
      │
-     │ Existing, separately paired USB Ethernet/SSH link
+     │ Onboard Wi-Fi / pinned SSH (not handheld USB)
      ▼
-Pi Zero W companion worker
+Pi A — managed-mode controller
+     │
+     │ A's own USB host/data link
+     ▼
+Pi B — gadget / separately qualified radio worker
 ```
 
 The hotspot-to-SanDisk and SanDisk-to-client links have been investigated independently. **The complete GameHack/Pi topology is not yet hardware-validated.** Pi Internet forwarding is separate future work; this project does not silently enable it.
@@ -86,12 +103,12 @@ The hotspot-to-SanDisk and SanDisk-to-client links have been investigated indepe
 | --- | --- | --- |
 | SanDisk | Optional Wi-Fi gateway, stock file/media services, storage, native telemetry and toolkit scripts | Running GameHack's ARM64 applications, becoming the Pi worker, or guaranteeing private storage on stock shares |
 | GameHack | Controller UI, coding frontend, media decoding/playback, reviewed backups and user interaction | Requiring the SanDisk for every application or silently rewriting the Pi USB profile |
-| Pi Zero W | Existing pinned-SSH USB worker, job queue and results | Replacing the SanDisk gateway or accepting unverified pairing |
+| Pi A / Pi B | A stays managed for control; A's own USB/data link controls separately enrolled B | Automatic A→B relay without implementation, sacrificing A's SSH radio, replacing the SanDisk gateway or accepting unverified pairing |
 | Management computer | Development, testing, checksum verification, pinned SSH administration and private backups | Treating ordinary USB media access as a firmware-flashing interface |
 
 ### Network boundaries
 
-The stock SanDisk AP uses `192.168.11.1`. GameHack's existing Pi USB network is separate, typically `192.168.77.0/24` in the associated project.
+The stock SanDisk AP uses `192.168.11.1`. GameHack direct-USB worker guidance is historical; the current target uses pinned Wi-Fi to A and a separate A→B USB/data link. SanDisk is not an automatic SSH jump host. Peer routing, addressing and A/B USB roles remain qualification gates.
 
 The tested custom SSH listener uses **TCP 2224**, bound to **`wlan1`**, the hotspot-facing interface. A handheld connected through the SanDisk AP on **`wlan0` does not automatically have that SSH access**. A reviewed downstream access policy and fresh device pairing are still required.
 
@@ -111,12 +128,61 @@ The following records the development checkpoint, not a guarantee for another dr
 | Wi-Fi encryption | User verified AP CCMP-only operation and WPA2-PSK/CCMP hotspot uplink after reboot | Unique passphrase strength and full client/forwarding behavior are separate checks |
 | Settings usability fix | Guarded live patch installed; served hashes verified; user reports Settings working | Basic live usability confirmed, not an exhaustive control test or native candidate-image validation |
 | GameHack library | Backup/restore, mounted media, favorites, notes, switches and storage doctor implemented in the associated staging tree | Not deployed to a handheld card or validated with native playback |
-| 128GB SD card | Full card detected at about 119GiB; block device and partition later report writable | Filesystem remains mounted read-only; actual write operation remains unresolved |
+| 128GB SD card | Full card detected at about 119GiB; bounded writes/checksum, reboot persistence and USB handoff/readback passed | Boot and USB return restore read-only mounts; persistent writable policy remains unresolved |
 | Custom rootfs image | 256MiB ext3 candidate built; offline filesystem check and artifact checksums pass | No native boot, verified rescue/restoration, or vendor update package |
+
+### Latest frozen-scope development checkpoint
+
+- **64 GB Media Drive target:** beta5 remains a local rootfs-only candidate,
+  **NOT FLASHABLE**. Newer source work is not automatically included in it.
+- Dashboard/battery fixes have scoped source and installed-UI evidence; media
+  ownership guards are source-only and never manufacture a missing storage mount.
+- Restricted SFTP has a maintained ARM candidate and native version/probe
+  evidence, **not qualified non-root login/jail/USB lifecycle**. Account writer
+  coordination, enrollment and recipient reset remain gates.
+- Permission-only shadow/backup hardening passed scoped native readback without
+  changing account bytes; reset/reboot persistence is not established.
+- Root-capture transport, cancellation and recovery have source/fixture progress,
+  **not a qualified real root capture or preservation-safe firmware installer**.
+- BusyBox remains unchanged; a separate pinned-runtime evaluation is preferred
+  over an unqualified in-place vendor replacement.
+
+See [feature gates](docs/FIRMWARE-FEATURE-FREEZE.md),
+[GO app control](docs/GO-APP-CONTROL.md),
+[restricted SFTP](docs/SFTP-CONFINEMENT-ENROLLMENT.md) and
+[BusyBox assessment](docs/BUSYBOX-UPDATE-ASSESSMENT.md).
+
+### Wardriving GO checkpoint
+
+The first tier is **phone + physical SanDisk alone**. Pi A→B and GameHack are
+optional upgrades, not prerequisites. Phone GPS requires explicit foreground
+permission and an independently authenticated channel; hotspot internet is not
+GPS transport. **GO is not end-to-end implemented or enabled.**
+
+- Host session/GPS/control models cover consent, revocation, bounded requests,
+  replay, clock uncertainty, stale/denied fixes and private cache observations.
+- Read-only native queries observed wlan0 AP and wlan1 managed **sharing phy0**;
+  monitor is advertised only. Two interfaces are not two independent radios.
+- Seven approved synthetic supervisor cases passed on the drive; real-worker
+  confinement, driver scan abort and coexistence remain unqualified.
+- Inactive ARM read-only worker and opaque-framing probe artifacts have offline
+  audits/emulated startup evidence. They are not an authenticated endpoint or
+  a live survey. No scan/mode/channel change is enabled by these components.
+- **WiGLE is deferred** until the existing frozen firmware work is complete.
+  No automatic cloud/location upload, background location or paid GO unlock.
+
+[GO evidence and limitations](docs/WARDRIVING-GO-SESSION.md) ·
+[app-control contract](docs/GO-APP-CONTROL.md) ·
+[read-only worker](docs/GO-READONLY-WORKER.md)
 
 ### Test checkpoints
 
-- **78 SanDisk-project tests passed** at the latest image/UI checkpoint.
+- Historical image/UI checkpoint: **78 SanDisk-project tests passed**.
+- Latest scoped GO tests: **88 passed**; scoped SFTP tests: **104 passed**, no skips.
+  These are not a full-workspace or firmware-release qualification.
+- Publication-checkpoint full suite: **596 run, 592 passed, 4 dependency/tool
+  skips, 0 failures/errors**. Skipped vendor-module, stock-audio and real-key
+  validation gates remain unqualified; no firmware-readiness claim follows.
 - **95 GameHack tests passed** in an isolated host test environment.
 - Browser coverage uses **local fixtures**, not a proxy to live device APIs.
 - Those counts describe the recorded checkpoint; run the suites for the current checkout.

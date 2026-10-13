@@ -2,6 +2,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from fixture_support import fixture_temp, fixed_paths
 
 ROOT=Path(__file__).resolve().parents[1]
 SCRIPT=ROOT/'device/beta-capture-checkpoint.sh'
@@ -9,7 +10,7 @@ SCRIPT=ROOT/'device/beta-capture-checkpoint.sh'
 
 class BetaCheckpointTests(unittest.TestCase):
     def run_fixture(self, exported=False, wrong_root=False):
-        with tempfile.TemporaryDirectory() as folder:
+        with fixture_temp() as folder:
             base=Path(folder);proc=base/'proc';(proc/'self').mkdir(parents=True);(proc/'net').mkdir()
             (proc/'modules').write_text('g_file_storage 1 0\n' if exported else '')
             (proc/'self/mountinfo').write_text('20 1 179:2 / / rw - ext3 /dev/root rw\n')
@@ -22,8 +23,7 @@ class BetaCheckpointTests(unittest.TestCase):
             (stage/'listener.log').write_text('secret log content must not be printed\n');(stage/'listener.log').chmod(0o600)
             (stage/'listener.pid').write_text('999\n');(stage/'listener.pid').chmod(0o600)
             text=SCRIPT.read_text().replace('[ "$(id -u)" = 0 ]',':')
-            for root in ('/proc/','/sys/','/tmp/'):
-                text=text.replace(root,str(base/root.strip('/'))+'/')
+            text=fixed_paths(text,base,('/proc/','/sys/','/tmp/'))
             path=base/'fixture.sh';path.write_text(text)
             before={str(p.relative_to(base)):p.read_bytes() for p in base.rglob('*') if p.is_file()}
             result=subprocess.run(['sh',str(path)],capture_output=True,text=True,timeout=10)

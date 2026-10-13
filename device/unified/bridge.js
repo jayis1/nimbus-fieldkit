@@ -29,6 +29,9 @@
   new MutationObserver(themeLabel).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
   controls.append(launch, theme);
   document.getElementById('navigator').append(controls);
+  const batteryScript = document.createElement('script');
+  batteryScript.src = prefix + 'battery.js';
+  document.head.append(batteryScript);
   // Preserve stock web authentication: SSH is not a web-admin session.
   const login = document.getElementById('divLogin');
   const password = document.getElementById('setting-admin-password');
@@ -185,4 +188,10 @@
   document.addEventListener('selectstart', event => {
     if (event.composedPath().includes(host)) event.stopPropagation();
   }, true);
+  // Hash links must open the toolkit, not leave #overview on the stock file view.
+  const requestedView = location.hash.slice(1);
+  if (['overview','features','network','vault','toolbox','security'].includes(requestedView)) {
+    pendingView = requestedView;
+    nav.click();
+  }
 })();

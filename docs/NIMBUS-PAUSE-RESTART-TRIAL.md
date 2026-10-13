@@ -1,6 +1,6 @@
 # Vendor-only Nimbus pause/restart trial — no remount or flash
 
-The user explicitly approved briefly interrupting the vendor dashboard/API to test Nimbus process exit/restart, while leaving both SSH listeners running and root writable. That approval does not cover SSH retirement, root read-only remount/freeze, capture, repair, bootloader/environment changes, reboot, formatting or firmware writes. No native trial result has been returned yet.
+The user explicitly approved briefly interrupting the vendor dashboard/API to test Nimbus process exit/restart, while leaving both SSH listeners running and root writable. That approval does not cover SSH retirement, root read-only remount/freeze, capture, repair, bootloader/environment changes, reboot, formatting or firmware writes. The supervised native trial and post-restart check returned PASS; observed scope and limitations are recorded below.
 
 ## Exact scope and guards
 
@@ -20,9 +20,17 @@ An EXIT/signal trap performs best-effort recovery after a termination request; i
 
 ## Validation
 
-**162 tests run, 160 pass, 2 Node-dependent skips**, with the previously documented host-only fixture sync isolation. New fixtures use synthetic process metadata and a mocked signal function that moves only fixture records; they never signal host/device processes or execute vendor code. They cover default check-only no-action, one targeted TERM/one restart on success, detached worker completion, error-after-stop recovery trap, stop refusal without force/duplicate start, restart failure without retry/false success, bad input/read-only-root refusal before signaling, shell syntax and source-package/no-overwrite scope. Fixtures preserve synthetic database bytes and both listener records. Native behavior remains untested until the user runs the separately approved procedure.
+**162 tests run, 160 pass, 2 Node-dependent skips**, with the previously documented host-only fixture sync isolation. New fixtures use synthetic process metadata and a mocked signal function that moves only fixture records; they never signal host/device processes or execute vendor code. They cover default check-only no-action, one targeted TERM/one restart on success, detached worker completion, error-after-stop recovery trap, stop refusal without force/duplicate start, restart failure without retry/false success, bad input/read-only-root refusal before signaling, shell syntax and source-package/no-overwrite scope. Fixtures preserve synthetic database bytes and both listener records. Returned native observations follow below; native failure-path recovery remains untested.
 
 ## Supervised execution conditions
+
+### Returned native evidence (2026-10-11)
+
+The first preflight refused with external power offline, before any worker marker or signal. After the user connected external power (`online=1`, battery status `Not charging`), the retained verified package passed preflight and the worker returned `PASS`: original vendor exit observed after one TERM, one reviewed start requested, matching vendor executable/HTTP listener observed, root still writable and both original SSH listener identities retained. No remount, SSH stop, reboot or firmware write occurred.
+
+The subsequent read-only `--check` also passed: restarted vendor PID 3235/start ticks 1742980, no children, one known settings-database writable root descriptor and no unclassified writable root descriptors. Old listener PID 3423/start ticks 2835 and replacement PID 6701/start ticks 648093 retained their matched identities/socket ownership. These are historical observations, never future signal targets. A fresh independent port-2224 authentication was not supplied in this checkpoint.
+
+The user confirmed browser access, Settings opening, MP4 playback, visibility of internal and SD files, and uploads to both destinations. Existing Settings values, music playback, upload byte-percentage/cancellation/confirmation and downloaded-file hash equality were not separately confirmed in this checkpoint. These checks support basic service restoration, not full database integrity, filesystem durability, a consistent root capture, safe boot recovery or image flashability. Keep trial evidence intact; no repeat `--start` is requested.
 
 Use a PC terminal, not the drive prompt. Keep an independent, freshly working pinned port-2225 shell open; its idle timeout may close it, so verify it still responds before the trial. Stop uploads, music playback and other media/settings writes; keep USB data disconnected and stable external power connected. The trial does not provide charging-independent recovery hardware.
 

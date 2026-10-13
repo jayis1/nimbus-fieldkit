@@ -10,7 +10,7 @@
     ['offline_toolbox', 'Offline toolbox', '⌘', 'Local operating guides and project notes, available without Internet.'],
     ['storage_alerts', 'Storage alerts', '▥', 'Check free space and warn below 64 MiB. Never delete files.'],
     ['file_sync', 'File sync', '⇄', 'Explicit transfers to mounted storage. No silent folder syncing.'],
-    ['pi_jobs', 'Pi job controls', '◈', 'Use the GameHack controller and its existing pinned Pi USB client.'],
+    ['pi_jobs', 'Pi A / Pi B requirements', '◈', 'GameHack uses pinned Wi-Fi SSH to A; A controls B over its own USB/data link. Dispatch and capture require separate qualification.'],
     ['local_git', 'Local Git repositories', '⑂', 'Create a new bare local repository when compatible Git is installed.'],
     ['encrypted_archives', 'Encrypted archive storage', '◇', 'Store pre-encrypted .age/.gpg files. Encrypt on GameHack first.']
   ];
@@ -38,6 +38,27 @@
     const hours = Math.floor(Number(seconds) / 3600);
     return hours >= 24 ? `${Math.floor(hours / 24)}d ${hours % 24}h` : `${hours}h ${Math.floor(Number(seconds) / 60) % 60}m`;
   };
+  function renderBattery() {
+    const live=window.NIMBUS_LIVE_BATTERY;
+    if (nativeMode && live && Date.now()-live.observedAt>=0 && Date.now()-live.observedAt<90000) {
+      text('battery',live.capacity===null ? 'Unknown / battery API unavailable' : `${live.capacity}% / ${live.status} · device API`);
+      return;
+    }
+    const capacity=data?.battery?.capacity;
+    const valid=(typeof capacity==='number' && Number.isInteger(capacity) && capacity>=0 && capacity<=100);
+    text('battery',valid ? `${capacity}% / ${data.battery.status || 'Unknown'} · snapshot` : 'Unknown / no measured battery percentage');
+  }
+  if (nativeMode) {
+    window.addEventListener('nimbus-battery-updated',renderBattery);
+    // Standalone native pages must not depend on the stock homepage creating
+    // global controls. Load the same source beside this dashboard script.
+    if (!window.NIMBUS_BATTERY_POLLING) {
+      const batteryScript=window.document.createElement('script');
+      batteryScript.src=new URL('battery.js',window.document.currentScript?.src || location.href).href;
+      batteryScript.onerror=renderBattery;
+      window.document.head.append(batteryScript);
+    }
+  }
   const create = (tag, className, value) => {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -71,7 +92,7 @@
   async function snapshot() {
     if (nativeMode) {
       const response = await fetch(`state.json?v=${Date.now()}`, {cache:'no-store'});
-      if (!response.ok) throw new Error('No native snapshot yet. Run sh nimbus-dashboard.sh snapshot in the installed directory.');
+      if (!response.ok) throw new Error('Device telemetry unavailable (HTTP ' + response.status + '). Verify the installed publisher path and publish a snapshot through pinned SSH; Refresh only reads it. The topology is a design, not measured connectivity.');
       const result = await response.json();
       validateSnapshot(result);
       return result;
@@ -90,11 +111,32 @@
       uptime_seconds:Number(host.uptime), memory:{total_bytes:(values.MemTotal || 0)*1024, reclaimable_estimate_bytes:((values.MemFree || 0)+(values.Buffers || 0)+(values.Cached || 0))*1024},
       storage:host.storage, battery:{capacity:null,status:'Unknown'}, network:{gateway:null,uplink:null,subnets:[],interfaces:host.interfaces.map(name => ({name,rx_bytes:null,tx_bytes:null,errors:null,drops:null}))}, features:[],vault:[]};
   }
+  async function storageSnapshotReason() {
+    if (!nativeMode) return '';
+    const controller=new AbortController();
+    const deadline=setTimeout(()=>controller.abort(),8000);
+    try {
+      const response=await fetch('/NimbusAPI',{method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,
+        headers:{'Content-Type':'text/xml'},body:'<?xml version="1.0"?><nimbus api="1.0" operation="getUseServices"></nimbus>'});
+      if(!response.ok)return '';
+      const body=await response.text();if(body.length>16384)return '';
+      const xml=new DOMParser().parseFromString(body,'application/xml');const node=xml.documentElement;
+      if(xml.querySelector('parsererror')||node.nodeName!=='nimbus'||node.getAttribute('errcode')!=='0')return '';
+      const msc=node.querySelector('MSCMode')?.textContent.trim();
+      if(msc==='true') {
+        text('disk-caption','USB access enabled; media snapshot unavailable');
+        return ' USB access is enabled in vendor settings. Media-backed tools need mounted storage; do not mount it while a USB host owns it. No storage mode was changed.';
+      }
+      return msc==='false' ? ' The media publisher is missing or not published. Verify its installed path; no storage or services were changed.' : '';
+    } catch (_) {return '';}
+    finally {clearTimeout(deadline);}
+  }
   function validateSnapshot(value) {
     if (!value || value.schema !== 'nimbus-dashboard/v1' || value.scope !== 'device' || !Array.isArray(value.features) || !Array.isArray(value.network?.interfaces) || value.features.length > 10 || value.network.interfaces.length > 64 || !Number.isFinite(value.generated_at)) throw new Error('Invalid native dashboard snapshot. No controls will be inferred.');
     if (value.features.some(item => !knownIds.has(item.id) || typeof item.enabled !== 'boolean' || typeof item.available !== 'boolean')) throw new Error('Invalid native feature state.');
   }
   async function refresh() {
+    if (nativeMode) window.dispatchEvent(new CustomEvent('nimbus-battery-refresh-request'));
     if (busy || (!nativeMode && !token)) return;
     busy = true; $('refresh').disabled = true;
     try {
@@ -106,7 +148,21 @@
       document.body.dataset.loaded = 'true';
       notice(next.scope === 'device' ? 'Reading the device snapshot. Browser actions require authenticated terminal confirmation.' : 'HOST DATA ONLY — native SanDisk snapshot is unavailable or host privacy is enabled.');
       return true;
-    } catch (error) { notice(error.message, true); text('freshness', 'Snapshot unavailable'); return false; }
+    } catch (error) {
+      // Never leave old ON flags/measurements looking live after a failed refresh.
+      data=null; history=[]; lastTraffic=null; document.body.dataset.loaded='false';
+      for (const id of ['gateway','free','memory','enabled-count','hostname','uptime','firmware','rate','last-updated']) text(id,'—');
+      text('scope','TELEMETRY UNAVAILABLE'); text('publisher','Snapshot unavailable');
+      text('freshness','Snapshot unavailable'); text('enabled-caption','No current native settings');
+      text('uplink-caption','No current route snapshot'); text('disk-caption','No current storage snapshot');
+      $('freshness').classList.add('warning'); document.body.dataset.scope='unavailable';
+      text('battery','Unknown'); text('interfaces','No current telemetry.'); text('subnets','No current telemetry.');
+      text('services','No current service inventory.'); text('service-source','No current listener telemetry.');
+      text('files','No current vault listing.'); text('file-count','—'); text('traffic-totals','No current samples.');
+      $('traffic-bars').replaceChildren(); renderFeatures(); renderBattery();
+      const storageReason=await storageSnapshotReason();
+      notice(error.message+storageReason,true); return false;
+    }
     finally { busy = false; $('refresh').disabled = false; }
   }
   function render() {
@@ -119,7 +175,7 @@
     text('memory', total > 0 ? `${Math.round(Math.max(0, total-free)/total*100)}%` : '—');
     text('enabled-count', data.features.length ? `${data.features.filter(item => item.enabled).length} / ${data.features.length}` : 'Not measured');
     text('enabled-caption', data.features.length ? 'Saved flags; not running tasks' : 'Host view has no native settings');
-    text('battery', data.battery?.capacity === null || data.battery?.capacity === undefined ? 'Unknown / driver not exposed' : `${data.battery.capacity}% / ${data.battery.status}`);
+    renderBattery();
     text('publisher', data.publisher || 'Host inventory');
     const age = (Date.now()/1000) - data.generated_at;
     text('freshness', age < -60 ? 'Check device clock' : age > 60 ? `Snapshot ${Math.floor(age)}s old` : 'Recent snapshot');
@@ -201,6 +257,10 @@
     updateCommand();openDialog();
   }
   function updateCommand() {
+    if(currentCommand===null) {
+      $('command-text').value='Architecture guidance only. Use GameHack’s Pi A / pinned Wi-Fi SSH menu; no SanDisk terminal command is needed.';
+      $('copy-command').disabled=true;return;
+    }
     try { const command=typeof currentCommand==='function' ? currentCommand():currentCommand;$('command-text').value=`cd ${quote(root())} || exit 1\n${command}`;$('copy-command').disabled=false; }
     catch(error) { $('command-text').value=error.message;$('copy-command').disabled=true; }
   }
@@ -215,7 +275,7 @@
   }
   function openAction(id) {
     if(!knownIds.has(id))return;
-    if(id==='pi_jobs')return openCommand('Pi job controls remain on GameHack','SanDisk has no verified pinned Pi pairing. Use the existing GameHack native Pi queue menu; do not copy private keys into public storage.','sh nimbus-agent.sh settings show');
+    if(id==='pi_jobs')return openCommand('Pi A / Pi B architecture requirements','GameHack → pinned Wi-Fi SSH → Pi A → USB/data → Pi B. A stays managed; B needs verified monitor support, a separate identity and USB provisioning. Run task executes on A, not automatically on B. This SanDisk page neither pairs nor relays commands; keep keys off public storage.',null);
     const current=feature(id);
     if(!current?.available)return notice(current?.reason || 'Load native feature state before preparing this action.',true);
     if(!current.enabled)return openToggle(id);

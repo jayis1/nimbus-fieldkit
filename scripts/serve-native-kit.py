@@ -17,6 +17,8 @@ ALLOWED = {'MANIFEST.json', 'nimbus-agent.sh', 'device-inventory.sh', 'NATIVE-IN
 ALLOWED_V03 = ALLOWED | {'nimbus-settings.sh', 'docs/TOGGLES.md'}
 ALLOWED_V04 = ALLOWED_V03 | {'nimbus-dashboard.sh', 'dashboard/index.html', 'dashboard/dashboard.css',
                            'dashboard/dashboard.js', 'dashboard/snapshot.awk', 'docs/DASHBOARD.md'}
+ALLOWED_COMPANION = ALLOWED_V04 | {'nimbus-companion-status.sh', 'docs/GAMEHACK-COMPANION-STATUS.md'}
+ALLOWED_GUARDED = ALLOWED_COMPANION | {'nimbus-media-guard.sh', 'dashboard/battery.js', 'docs/MEDIA-OWNERSHIP-GUARD.md'}
 
 
 def load_bundle(path):
@@ -26,7 +28,7 @@ def load_bundle(path):
     with tarfile.open(fileobj=io.BytesIO(data), mode='r:') as archive:
         members = archive.getmembers()
         names = {m.name for m in members}
-        if names not in (ALLOWED, ALLOWED_V03, ALLOWED_V04) or len(members) != len(names) or any(not m.isfile() for m in members):
+        if names not in (ALLOWED, ALLOWED_V03, ALLOWED_V04, ALLOWED_COMPANION, ALLOWED_GUARDED) or len(members) != len(names) or any(not m.isfile() for m in members):
             raise ValueError('Bundle must contain only the approved native scripts/docs')
         manifest = json.load(archive.extractfile('MANIFEST.json'))
         entries = manifest.get('files', [])

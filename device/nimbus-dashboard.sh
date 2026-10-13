@@ -9,7 +9,22 @@ PROC="${NIMBUS_PROC_DIR:-/proc}"
 POWER="${NIMBUS_POWER_DIR:-/sys/class/power_supply}"
 FEATURES='network_health watchdog speed_tests backup_vault offline_toolbox storage_alerts file_sync pi_jobs local_git encrypted_archives'
 fail() { printf '%s\n' "$1" >&2; exit 2; }
-enabled() { [ ! -L "$STATE" ] && [ -f "$STATE/$1" ] && [ ! -L "$STATE/$1" ] && [ "$(cat "$STATE/$1")" = on ]; }
+enabled() {
+    sh "$BASE/nimbus-media-guard.sh" check-read "$STATE" >/dev/null 2>&1 || return 1
+    [ ! -L "$STATE" ] && [ -f "$STATE/$1" ] && [ ! -L "$STATE/$1" ] && [ "$(cat "$STATE/$1")" = on ]
+}
+write_guard() {
+    [ -f "$BASE/nimbus-media-guard.sh" ] && [ ! -L "$BASE/nimbus-media-guard.sh" ] || fail 'Missing trusted media guard'
+    sh "$BASE/nimbus-media-guard.sh" check-write "$1" >/dev/null || fail 'Media write guard refused; no mount or USB mode changed'
+}
+publish_cleanup() {
+    # Do not touch media again after an observed ownership loss, even to delete
+    # our own staging files. Preserve the lock/evidence for explicit inspection.
+    if sh "$BASE/nimbus-media-guard.sh" check-write "$DATA" >/dev/null 2>&1; then
+        rm -f "$work/features.tsv" "$work/vault.tsv" "$work/state.json"
+        rmdir "$work" 2>/dev/null
+    fi
+}
 snapshot() {
     case "$DATA" in /*) :;; *) fail 'Use an absolute data directory';; esac
     parent="$DATA"
@@ -20,18 +35,20 @@ snapshot() {
     [ -d "$DATA" ] && [ ! -L "$DATA" ] || fail 'Missing or symlink data directory'
     [ -d "$DATA/dashboard" ] && [ ! -L "$DATA/dashboard" ] || fail 'Missing or symlink dashboard directory'
     [ -f "$BASE/dashboard/snapshot.awk" ] && [ ! -L "$BASE/dashboard/snapshot.awk" ] || fail 'Missing trusted snapshot encoder'
+    write_guard "$DATA"
+    write_guard "$STATE"
     work="$DATA/dashboard/.publish-lock"
     mkdir "$work" 2>/dev/null || fail 'Publisher busy or stale .publish-lock; review before retrying'
-    trap 'rm -f "$work/features.tsv" "$work/vault.tsv" "$work/state.json"; rmdir "$work" 2>/dev/null' 0
+    trap publish_cleanup 0
     trap 'exit 1' 1 2 15
-    : > "$work/features.tsv"
+    : > "$work/features.tsv" || fail 'Cannot create feature staging file'
     for feature in $FEATURES; do
         on=off; enabled "$feature" && on=on
         available=yes
         reason=$(NIMBUS_STATE_DIR="$STATE" sh "$BASE/nimbus-settings.sh" availability "$feature") || available=no
-        printf '%s\t%s\t%s\t%s\n' "$feature" "$on" "$available" "$reason" >> "$work/features.tsv"
+        printf '%s\t%s\t%s\t%s\n' "$feature" "$on" "$available" "$reason" >> "$work/features.tsv" || fail 'Cannot stage feature inventory'
     done
-    : > "$work/vault.tsv"
+    : > "$work/vault.tsv" || fail 'Cannot create vault staging file'
     count=0
     if [ ! -L "$DATA/vault" ]; then
         for file in "$DATA"/vault/*; do
@@ -40,7 +57,7 @@ snapshot() {
             case "$name" in *[!a-zA-Z0-9._-]*) continue;; esac
             size=$(LC_ALL=C ls -ln "$file" | awk '{print $5}')
             case "$size" in ''|*[!0-9]*) continue;; esac
-            printf '%s\t%s\n' "$name" "$size" >> "$work/vault.tsv"
+            printf '%s\t%s\n' "$name" "$size" >> "$work/vault.tsv" || fail 'Cannot stage vault inventory'
             count=$((count + 1)); [ "$count" -lt 64 ] || break
         done
     fi
@@ -69,6 +86,7 @@ snapshot() {
         "$work/features.tsv" "$work/vault.tsv" "$PROC/net/tcp" > "$work/state.json" || fail 'Snapshot encoder failed'
     [ ! -L "$DATA/dashboard/state.json" ] || fail 'Refusing a symlink snapshot'
     if [ -e "$DATA/dashboard/state.json" ] && [ ! -f "$DATA/dashboard/state.json" ]; then fail 'Snapshot destination is not a regular file'; fi
+    write_guard "$DATA"
     mv -f "$work/state.json" "$DATA/dashboard/state.json" || fail 'Could not publish snapshot'
     rm -f "$work/features.tsv" "$work/vault.tsv"
     rmdir "$work" || fail 'Could not release publisher lock'
@@ -88,6 +106,8 @@ case "${1:-help}" in
         old="$2/.settings"
         [ -d "$old" ] && [ ! -L "$old" ] || fail 'Old settings unavailable or symlinked'
         [ ! -e "$STATE" ] && [ ! -L "$STATE" ] || fail 'New settings already exist; refusing overwrite'
+        write_guard "$STATE"
+        write_guard "$old"
         for feature in $FEATURES; do
             if [ -e "$old/$feature" ]; then
                 [ -f "$old/$feature" ] && [ ! -L "$old/$feature" ] || fail 'Invalid old setting'

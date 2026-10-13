@@ -177,8 +177,15 @@ class DashboardTests(unittest.TestCase):
         ''')
         class QuietHandler(SimpleHTTPRequestHandler):
             writes=0
+            battery_queries=0
             def log_message(self,*args): pass
             def do_POST(self):
+                body=self.rfile.read(int(self.headers.get('Content-Length','0')))
+                if self.path=='/NimbusAPI' and body==b'<?xml version="1.0"?><nimbus api="1.0" operation="getBatteryLevel"></nimbus>':
+                    type(self).battery_queries+=1
+                    self.send_response(200);self.end_headers()
+                    self.wfile.write(b'<nimbus errcode="0"><level>100</level><status>full</status></nimbus>')
+                    return
                 type(self).writes+=1
                 self.send_error(403)
         http=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(QuietHandler,directory=str(self.install)))
@@ -193,5 +200,6 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(result.returncode,0,result.stderr[-3000:])
                 self.assertIn('data-browser-test="passed"',result.stdout)
                 self.assertEqual(QuietHandler.writes,0)
+                self.assertGreaterEqual(QuietHandler.battery_queries,1)
         finally:
             http.shutdown();http.server_close();thread.join()

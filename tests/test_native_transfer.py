@@ -1,7 +1,9 @@
 import http.client
+import io
 import importlib.util
 from pathlib import Path
 import tempfile
+import tarfile
 import threading
 import unittest
 
@@ -53,3 +55,25 @@ class TransferTests(unittest.TestCase):
             self.assertTrue(server.delivered)
         finally:
             server.shutdown(); server.server_close(); thread.join()
+
+    def test_companion_allowlist_is_exact_not_arbitrary_expansion(self):
+        self.assertEqual(set(package.SOURCES) | {'MANIFEST.json'}, transfer.ALLOWED_GUARDED)
+        self.assertEqual(transfer.ALLOWED_GUARDED-transfer.ALLOWED_COMPANION,
+                         {'nimbus-media-guard.sh','dashboard/battery.js','docs/MEDIA-OWNERSHIP-GUARD.md'})
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bundle = root / 'kit.tar'
+            package.package(bundle)
+            for variant in ('missing-doc', 'extra-script'):
+                output = root / (variant + '.tar')
+                with tarfile.open(bundle) as original, tarfile.open(output, 'w') as modified:
+                    for member in original:
+                        if variant == 'missing-doc' and member.name == 'docs/GAMEHACK-COMPANION-STATUS.md':
+                            continue
+                        modified.addfile(member, original.extractfile(member))
+                    if variant == 'extra-script':
+                        member = tarfile.TarInfo('unreviewed.sh')
+                        member.size = 1
+                        modified.addfile(member, io.BytesIO(b'x'))
+                with self.assertRaises(ValueError):
+                    transfer.load_bundle(output)

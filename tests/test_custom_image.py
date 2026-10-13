@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -85,9 +86,10 @@ class CustomImageTests(unittest.TestCase):
             self.assertEqual(archive.getmember('opt/nimbus/dropbearmulti').mode, 0o700)
 
     def test_vendor_modules_unchanged(self):
-        vendor = Path('/tmp/opencode/sandisk-fw-3-04/rootfs_nimbus_v3.04.tar')
+        vendor = Path(os.environ.get('NIMBUS_TEST_STOCK_ROOTFS', '/tmp/opencode/sandisk-fw-3-04/rootfs_nimbus_v3.04.tar'))
         if not CANDIDATE.exists() or not vendor.exists():
             self.skipTest('Vendor/candidate archives unavailable')
+        self.assertEqual(builder.digest(vendor),builder.STOCK_HASH,'Vendor comparison requires reviewed clean input')
         with tarfile.open(vendor) as stock, tarfile.open(CANDIDATE / 'rootfs.tar') as custom:
             for member in stock:
                 if member.isfile() and member.name.startswith('lib/modules/'):
@@ -190,11 +192,11 @@ class CustomImageTests(unittest.TestCase):
                 manifest=json.loads((base/'BUILD-MANIFEST.json').read_text())
                 for name in ('bridge.js','upload-progress.js','mascot.js'):
                     source='device/unified/'+name
-                    data=(ROOT/source).read_bytes()
-                    self.assertEqual(manifest['overlay_source_sha256'][source],hashlib.sha256(data).hexdigest())
-                    if name=='bridge.js':data=data.replace(b'/data/fieldkit-v05/',b'/data/fieldkit-v06/')
                     payload=archive.extractfile('nimbus/data/fieldkit-v06/'+name).read()
-                    self.assertEqual(hashlib.sha256(payload).hexdigest(),hashlib.sha256(data).hexdigest())
+                    # Immutable beta3 provenance is checked against its archived
+                    # source form, not a later working-tree dashboard revision.
+                    original=payload.replace(b'/data/fieldkit-v06/',b'/data/fieldkit-v05/') if name=='bridge.js' else payload
+                    self.assertEqual(manifest['overlay_source_sha256'][source],hashlib.sha256(original).hexdigest())
                 mascot=archive.extractfile('nimbus/data/fieldkit-v06/mascot.js').read()
                 self.assertIn(b'geometryDirty',mascot);self.assertNotIn(b'data-busy',mascot)
                 self.assertFalse(any('nimbus-speed-' in name or 'restoration-trial' in name or 'handover-trial' in name for name in archive.getnames()))

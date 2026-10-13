@@ -48,6 +48,35 @@ def build(stock_archive, output, previous_bundle=None):
     stock = stock.replace('<div id="content" class="topMarginSpace">', '<div id="content" class="topMarginSpace">\n<div id="nimbus-unified-host"></div>')
     stock = stock.replace('</body>', '<script src="/data/fieldkit-v05/audio-html5.js"></script>\n<script src="/data/fieldkit-v05/upload-progress.js"></script>\n<script src="/data/fieldkit-v05/bridge.js"></script>\n<script src="/data/fieldkit-v05/mascot.js"></script>\n</body>')
     stock = stock.replace('/data/fieldkit-v05/', f'/data/fieldkit-{asset_version}/')
+    body, css, script = toolkit_assets()
+    prefix = f'fieldkit-{asset_version}/'
+    bridge = (ROOT / 'device/unified/bridge.js').read_text().replace('/data/fieldkit-v05/', f'/data/fieldkit-{asset_version}/')
+    files = {'index.html': stock.encode(), prefix+'stock-dark.css': (ROOT / 'device/unified/stock-dark.css').read_bytes(),
+             prefix+'bridge.js': bridge.encode(), prefix+'audio-html5.js': (ROOT / 'device/unified/audio-html5.js').read_bytes(), prefix+'upload-progress.js': (ROOT / 'device/unified/upload-progress.js').read_bytes(), prefix+'mascot.js': (ROOT / 'device/unified/mascot.js').read_bytes(), prefix+'SECURITY-PLAN.md': (ROOT / 'docs/SECURITY-PLAN.md').read_bytes(),
+             prefix+'toolkit.html': body.encode(), prefix+'toolkit.css': css.encode(), prefix+'toolkit.js': script.encode(),
+             prefix+'battery.js': (ROOT/'device/unified/battery.js').read_bytes()}
+    files.update({'native/' + name: (ROOT / source).read_bytes() for name, source in native.SOURCES.items()})
+    files['native/docs/UNIFIED-DASHBOARD.md'] = (ROOT / 'docs/UNIFIED-DASHBOARD.md').read_bytes()
+    if previous_bundle:
+        # UI-only upgrade: no new runtime, setting migration or vault duplication.
+        files = {name: content for name, content in files.items() if not name.startswith('native/')}
+    files['install.sh'] = installer(digest, upgrade=bool(previous_bundle)).encode()
+    manifest = {'schema': 'nimbus-unified/v1', 'version': '0.6' if previous_bundle else '0.5', 'status': 'candidate/not installed',
+                'expected_stock_index_sha256': stock_digest, 'expected_current_index_sha256': digest,
+                'runtime_install': '/mnt/storage/nimbus-unified-v05/native',
+                'files': [{'name': name, 'sha256': hashlib.sha256(data).hexdigest(), 'bytes':len(data)} for name, data in sorted(files.items())]}
+    files['MANIFEST.json'] = (json.dumps(manifest, indent=2)+'\n').encode()
+    files['SHA256SUMS'] = ''.join(f'{hashlib.sha256(data).hexdigest()}  {name}\n' for name, data in sorted(files.items())).encode()
+    output = Path(output); output.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(output, 'w', format=tarfile.USTAR_FORMAT) as archive:
+        for name, data in sorted(files.items()):
+            info=tarfile.TarInfo(name);info.size=len(data);info.mtime=STAMP;info.mode=0o644;info.uid=info.gid=0
+            archive.addfile(info, io.BytesIO(data))
+    return hashlib.sha256(output.read_bytes()).hexdigest()
+
+
+def toolkit_assets():
+    """Generate only first-party toolkit assets, without a vendor homepage input."""
     page = (ROOT / 'fieldkit/index.html').read_text()
     body = page.split('<body>', 1)[1].split('</body>', 1)[0]
     body = re.sub(r'<aside class="sidebar">.*?</aside>', '<a id="stock-link" hidden></a>', body, count=1, flags=re.S)
@@ -70,29 +99,7 @@ const real=window.document;
 const facade={getElementById:id=>surface.getElementById(id),querySelectorAll:s=>surface.querySelectorAll(s),createElement:t=>real.createElement(t),body:surface.host,documentElement:real.documentElement,execCommand:c=>real.execCommand(c),get hidden(){return real.hidden||!real.body.classList.contains('nimbus-toolkit-open');}};
 """
     script = "(() => {\n" + facade + "((document) => {\n" + script + "\n})(facade);\n})();\n"
-    prefix = f'fieldkit-{asset_version}/'
-    bridge = (ROOT / 'device/unified/bridge.js').read_text().replace('/data/fieldkit-v05/', f'/data/fieldkit-{asset_version}/')
-    files = {'index.html': stock.encode(), prefix+'stock-dark.css': (ROOT / 'device/unified/stock-dark.css').read_bytes(),
-             prefix+'bridge.js': bridge.encode(), prefix+'audio-html5.js': (ROOT / 'device/unified/audio-html5.js').read_bytes(), prefix+'upload-progress.js': (ROOT / 'device/unified/upload-progress.js').read_bytes(), prefix+'mascot.js': (ROOT / 'device/unified/mascot.js').read_bytes(), prefix+'SECURITY-PLAN.md': (ROOT / 'docs/SECURITY-PLAN.md').read_bytes(),
-             prefix+'toolkit.html': body.encode(), prefix+'toolkit.css': css.encode(), prefix+'toolkit.js': script.encode()}
-    files.update({'native/' + name: (ROOT / source).read_bytes() for name, source in native.SOURCES.items()})
-    files['native/docs/UNIFIED-DASHBOARD.md'] = (ROOT / 'docs/UNIFIED-DASHBOARD.md').read_bytes()
-    if previous_bundle:
-        # UI-only upgrade: no new runtime, setting migration or vault duplication.
-        files = {name: content for name, content in files.items() if not name.startswith('native/')}
-    files['install.sh'] = installer(digest, upgrade=bool(previous_bundle)).encode()
-    manifest = {'schema': 'nimbus-unified/v1', 'version': '0.6' if previous_bundle else '0.5', 'status': 'candidate/not installed',
-                'expected_stock_index_sha256': stock_digest, 'expected_current_index_sha256': digest,
-                'runtime_install': '/mnt/storage/nimbus-unified-v05/native',
-                'files': [{'name': name, 'sha256': hashlib.sha256(data).hexdigest(), 'bytes':len(data)} for name, data in sorted(files.items())]}
-    files['MANIFEST.json'] = (json.dumps(manifest, indent=2)+'\n').encode()
-    files['SHA256SUMS'] = ''.join(f'{hashlib.sha256(data).hexdigest()}  {name}\n' for name, data in sorted(files.items())).encode()
-    output = Path(output); output.parent.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(output, 'w', format=tarfile.USTAR_FORMAT) as archive:
-        for name, data in sorted(files.items()):
-            info=tarfile.TarInfo(name);info.size=len(data);info.mtime=STAMP;info.mode=0o644;info.uid=info.gid=0
-            archive.addfile(info, io.BytesIO(data))
-    return hashlib.sha256(output.read_bytes()).hexdigest()
+    return body, css, script
 
 
 def installer(digest, upgrade=False):
@@ -116,7 +123,7 @@ case "${1:-}" in
   sh native/nimbus-dashboard.sh import-settings /mnt/storage/nimbus-fieldkit-v03
   sh native/nimbus-dashboard.sh snapshot
   mkdir /nimbus/data/fieldkit-v05
-   for file in stock-dark.css bridge.js audio-html5.js upload-progress.js mascot.js toolkit.html toolkit.css toolkit.js SECURITY-PLAN.md; do
+   for file in stock-dark.css bridge.js audio-html5.js upload-progress.js mascot.js toolkit.html toolkit.css toolkit.js battery.js SECURITY-PLAN.md; do
    cp "fieldkit-v05/$file" "/nimbus/data/fieldkit-v05/$file"
    chmod 644 "/nimbus/data/fieldkit-v05/$file"
    filehash=$(sha256sum "fieldkit-v05/$file" | awk '{print $1}')

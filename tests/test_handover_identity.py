@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from fixture_support import fixture_temp, fixed_paths
 
 ROOT=Path(__file__).resolve().parents[1]
 SCRIPT=ROOT/'device/handover-identity-preflight.sh'
@@ -10,7 +11,7 @@ SCRIPT=ROOT/'device/handover-identity-preflight.sh'
 
 class HandoverIdentityTests(unittest.TestCase):
     def run_fixture(self, wrong_socket=False, wrong_hash=False, exported=False, known_vendor_log=False):
-        with tempfile.TemporaryDirectory() as folder:
+        with fixture_temp() as folder:
             base=Path(folder);proc=base/'proc';(proc/'self').mkdir(parents=True);(proc/'net').mkdir()
             (proc/'modules').write_text('g_file_storage 1\n' if exported else '')
             (proc/'self/mountinfo').write_text('20 1 179:2 / / rw - ext3 /dev/root rw\n')
@@ -39,9 +40,8 @@ class HandoverIdentityTests(unittest.TestCase):
             text=text.replace('1bebface41ff6ad832d0b1299ff49aca0698529399054901d860b50a1bb0213c',hashlib.sha256(binary.read_bytes()).hexdigest() if not wrong_hash else '0'*64)
             text=text.replace('b2472e7c34c22b2bb7dbda2d58ce8836cedccf5b10680047d60eaf10956220dd',hashlib.sha256(nimbus.read_bytes()).hexdigest())
             text=text.replace("stat -c '%u:%g:%a'","stat -c '0:0:%a'").replace("stat -c '%u:%g'","stat -c '0:0'")
+            text=fixed_paths(text,base,('/proc/','/sys/','/root/','/tmp/','/nimbus/','/etc/rc.d/','/opt/qsi/'))
             text=text.replace('root_device=$(stat -c \'%d\' /)','root_device=$(stat -c \'%d\' "'+str(base)+'")')
-            for root in ('/proc/','/sys/','/root/','/tmp/','/nimbus/','/etc/rc.d/','/opt/qsi/'):
-                text=text.replace(root,str(base/root.strip('/'))+'/')
             text=text.replace('in /root ', 'in "'+str(base/'root')+'" ').replace(' /tmp ', ' "'+str(base/'tmp')+'" ')
             path=base/'fixture.sh';path.write_text(text)
             before={str(p.relative_to(base)):p.read_bytes() for p in base.rglob('*') if p.is_file()}

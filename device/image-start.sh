@@ -27,11 +27,13 @@ else
     echo 'Nimbus SSH not started: valid offline keys with root ownership and private permissions required.' >&2
 fi
 # Never populate unmounted media or overwrite an existing toolkit installation.
-if [ -r /proc/modules ] && ! grep -q '^g_file_storage ' /proc/modules &&
-   awk '$1 == "/dev/mmcblk0p4" && $2 == "/mnt/storage" && $4 ~ /(^|,)rw(,|$)/ {found=1} END {exit !found}' /proc/mounts; then
+if [ -f /opt/nimbus/native/nimbus-media-guard.sh ] && [ ! -L /opt/nimbus/native/nimbus-media-guard.sh ] &&
+   sh /opt/nimbus/native/nimbus-media-guard.sh check-write /mnt/storage >/dev/null; then
     base=/mnt/storage/nimbus-unified-v05
     if [ ! -e "$base" ] && [ ! -L "$base" ]; then
-        mkdir "$base" && cp -R /opt/nimbus/native "$base/native"
+        mkdir "$base" &&
+            sh /opt/nimbus/native/nimbus-media-guard.sh check-write "$base" >/dev/null &&
+            cp -R /opt/nimbus/native "$base/native"
     fi
     if [ -d "$base/native" ] && [ ! -L "$base" ] && [ ! -L "$base/native" ]; then
         # Exported media is DATA, never a root boot-time code source.

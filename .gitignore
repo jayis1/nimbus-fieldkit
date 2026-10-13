@@ -6,6 +6,8 @@
 /private/
 /vault/
 /private-wifi-plan/
+# Local owner-specific agent/pins/evidence handoff; never publish.
+/docs/NEXT-PHASE-NOTE.md
 /build/
 /releases/
 /rootfs-tree/

@@ -110,3 +110,12 @@ class NativeSettingsTests(unittest.TestCase):
         link = self.root / 'link.txt'; link.symlink_to(source)
         self.run_settings('set', 'file_sync', 'on')
         self.assertNotEqual(self.run_settings('run', 'file_sync', str(link), str(self.root), check=False).returncode, 0)
+
+    def test_existing_special_destination_refused_without_opening(self):
+        source=self.root/'report.txt';source.write_bytes(b'reviewed data')
+        destination=self.root/'destination';destination.mkdir()
+        os.mkfifo(destination/source.name)
+        self.run_settings('set','file_sync','on')
+        result=self.run_settings('run','file_sync',str(source),str(destination),check=False)
+        self.assertNotEqual(result.returncode,0)
+        self.assertIn('never open existing files or special nodes',result.stderr)

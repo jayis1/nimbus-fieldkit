@@ -2,6 +2,28 @@
 
 ## Decision
 
+Latest native result: the separately approved restoration-only root ro/rw trial
+returned PASS with original writable options/services restored and temporary
+management retained. See [scope and evidence](ROOT-RESTORATION-TRIAL-REVIEW.md).
+Earlier no-remount statements below describe historical checkpoints. No root
+capture/flash has occurred; post-trial authentication/service follow-up and a
+separate consistent-capture implementation/approval are still required.
+
+Latest checkpoint: the supervised vendor-only pause/restart and post-restart
+check passed, with user-confirmed browser/Settings/MP4 and internal/SD browsing
+and uploads. See [trial evidence](NIMBUS-PAUSE-RESTART-TRIAL.md) and the
+[next handover/restoration review](ROOT-CAPTURE-HANDOVER-PLAN.md). Historical
+pending statements below describe earlier checkpoints; no old-listener stop,
+root remount or consistent capture has occurred.
+
+Subsequent checkpoint: the separate management-only old-listener stop/restore
+passed, followed by fresh pinned login and basic dashboard/Settings/storage
+checks. See [SSH trial evidence](SSH-HANDOVER-TRIAL.md). The statement above
+about no old-listener stop describes its earlier checkpoint. Root remount and
+consistent capture still have not occurred. The [root-restoration review](ROOT-RESTORATION-TRIAL-REVIEW.md)
+now covers the distinct mount utility, mtab/helper suppression and the explicit
+writable-restoration flag needed to avoid a reference-code read-only fallback.
+
 Do **not** implement the proposed timed root-freeze over SSH as a guaranteed-bounded capture method. The published kernel's freeze path can block while holding the lock required by thaw. A second process, resident static binary, shell trap or host timeout cannot guarantee recovery from that condition.
 
 The next candidate to review is a temporary **non-forced root read-only remount**, followed by direct private SSH capture and restoration of the original read-write mount state. This is a design lead, not a safe-to-run procedure. No remount, service stop, sync command, watchdog open or recovery boot has been performed.
@@ -89,9 +111,9 @@ Run the new targeted check from a trusted PC terminal:
 
 ```sh
 ssh -o StrictHostKeyChecking=yes \
-  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
-  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
-  -p 2224 root@172.16.10.178 'sh -s' \
+  -o UserKnownHostsFile="$HOME/.ssh/nimbus-test-known-hosts" \
+  -o IdentitiesOnly=yes -i "$HOME/.ssh/nimbus-admin-ed25519" \
+  -p 2224 root@192.0.2.10 'sh -s' \
   < device/root-writer-preflight.sh
 ```
 
@@ -113,9 +135,9 @@ From the trusted PC, the optional start is:
 
 ```sh
 ssh -o StrictHostKeyChecking=yes \
-  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
-  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
-  -p 2224 root@172.16.10.178 'sh -s -- --start' \
+  -o UserKnownHostsFile="$HOME/.ssh/nimbus-test-known-hosts" \
+  -o IdentitiesOnly=yes -i "$HOME/.ssh/nimbus-admin-ed25519" \
+  -p 2224 root@192.0.2.10 'sh -s -- --start' \
   < device/ssh/capture-listener.sh
 ```
 
@@ -125,10 +147,10 @@ After reported startup, verify a fresh connection using the **existing port-2224
 
 ```sh
 ssh -o StrictHostKeyChecking=yes \
-  -o UserKnownHostsFile=/home/jais/.ssh/nimbus-test-known-hosts \
-  -o HostKeyAlias='[172.16.10.178]:2224' \
-  -o IdentitiesOnly=yes -i /home/jais/.ssh/nimbus-admin-ed25519 \
-  -p 2225 root@172.16.10.178 'id'
+  -o UserKnownHostsFile="$HOME/.ssh/nimbus-test-known-hosts" \
+  -o HostKeyAlias='[192.0.2.10]:2224' \
+  -o IdentitiesOnly=yes -i "$HOME/.ssh/nimbus-admin-ed25519" \
+  -p 2225 root@192.0.2.10 'id'
 ```
 
 `HostKeyAlias` looks up the already pinned identity under the old endpoint; it does not disable host verification, change the key, or edit the known-hosts file. If the old pin is unavailable or a mismatch occurs, stop rather than accept an unfamiliar key. A changed DHCP address needs a separately validated existing-pin lookup, not blindly substituting an alias.
@@ -151,7 +173,7 @@ Correction checkpoint: **130 local tests pass**, including preservation of the e
 
 Subsequent user retry passed the exact-failure guards, preserved the original failed stage as `/tmp/nimbus-capture-ssh-v1.invalid-E` and reported a temporary live PID/listening entry on port 2225. Existing port 2224, hooks, keys, services and mounts were unchanged. This is startup evidence only: fresh pinned port-2225 login and writer inventory remain pending. Do not stop port 2224 based on this report alone. The additionally requested [HTML5 Music UI](HTML5-MUSIC.md) is prepared offline, not installed; it does not change the current capture/handover state.
 
-Further user verification: a new port-2225 connection with strict checking, the dedicated known-hosts file and `HostKeyAlias='[172.16.10.178]:2224'` successfully ran `id`, returning `uid=0(root) gid=0(root)`. Fresh existing-pin root authentication therefore passed. Writer inventory through that replacement session, independent interactive access, password rejection, handover and cleanup remain pending. Port 2224 must remain running for now. No remount or HTML5 UI installation occurred.
+Further user verification: a new port-2225 connection with strict checking, the dedicated known-hosts file and the existing port2224 alias successfully ran `id`, returning `uid=0(root) gid=0(root)`. Fresh existing-pin root authentication therefore passed. Writer inventory through that replacement session, independent interactive access, password rejection, handover and cleanup remain pending. Port 2224 must remain running for now. No remount or HTML5 UI installation occurred.
 
 Subsequent writer inventory through the pinned port-2225 connection reported only `nimbus` PID 3288 (one writable root fd) and old `dropbearmulti-b` PID 3423 (two), with zero shared writable root mappings and zero incomplete observations. No writable root holders from the temporary server/current replacement session were observed. All four service hashes again matched. This supports the replacement's RAM-backed logging design, not exhaustive remount eligibility, alias-complete descriptor tracking or completed handover. Old port 2224 and `nimbus` remain running; do not use these historical PIDs as stop commands. The separately requested HTML5 UI patch can be installed through the new verified connection without stopping either listener or remounting root; no such installation is yet confirmed.
 

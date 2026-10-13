@@ -14,6 +14,7 @@ import socket
 import stat
 import struct
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -22,7 +23,60 @@ DOCS = Path(__file__).with_name('nimbus-docs')
 if not DOCS.is_dir():
     DOCS = Path(__file__).resolve().parents[1] / 'docs'
 DOCUMENTS = ('FEATURES.md', 'GAMEHACK.md', 'FIRMWARE.md',
-             'FIRMWARE-3.04-INSPECTION.md', 'LIVE-TEST-2026-10-11.md', 'TOGGLES.md', 'DASHBOARD.md')
+              'FIRMWARE-3.04-INSPECTION.md', 'LIVE-TEST-2026-10-11.md', 'TOGGLES.md', 'DASHBOARD.md')
+
+
+def companion_report(raw):
+    """Validate a bounded native observation, never grant authority from JSON."""
+    if not isinstance(raw, bytes) or len(raw) > 16384:
+        raise ValueError('Companion report must be at most 16 KiB of JSON bytes')
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('Duplicate companion report field')
+            result[key] = value
+        return result
+
+    data = json.loads(raw, object_pairs_hook=unique_object)
+    if (not isinstance(data, dict) or data.get('schema') != 'nimbus-companion-status/v1'
+            or data.get('scope') != 'device_observation'):
+        raise ValueError('Invalid companion report schema/scope')
+    storage, management = data.get('storage'), data.get('management')
+    integration, permissions = data.get('integration'), data.get('permissions')
+    if not all(isinstance(value, dict) for value in (storage, management, integration, permissions)):
+        raise ValueError('Missing companion report sections')
+    mounts = ('internal', 'sd', 'sd_ftp')
+    if any(storage.get(name) not in ('absent', 'read_only', 'read_write', 'unknown') for name in mounts):
+        raise ValueError('Invalid storage observation')
+    if storage.get('usb_export') not in ('active', 'inactive', 'unknown'):
+        raise ValueError('Invalid USB export observation')
+    if (type(management.get('port')) is not int or management['port'] != 2224
+            or management.get('listener') not in ('observed', 'not_observed', 'unknown')
+            or any(management.get(name) != 'not_tested' for name in ('authentication', 'host_pin'))
+            or management.get('downstream_access') != 'not_qualified'):
+        raise ValueError('Invalid management observation; report cannot authenticate itself')
+    if (any(integration.get(name) != 'not_qualified'
+            for name in ('remote_browsing', 'sftp', 'backup_transfer'))
+            or integration.get('media_playback') != 'client_validation_required'
+            or integration.get('pi_worker') != 'independent'
+            or set(permissions) != {'remote_write', 'configure_network', 'change_mounts'}
+            or any(value is not False for value in permissions.values())):
+        raise ValueError('Unqualified companion capabilities or permissions')
+    if storage['usb_export'] == 'active':
+        state = 'blocked_usb_export'
+    elif (storage['usb_export'] == 'unknown'
+          or any(storage[name] in ('absent', 'unknown') for name in mounts)):
+        state = 'blocked_storage_unconfirmed'
+    else:
+        state = 'local_mounts_observed'
+    return {'schema': 'gamehack-companion-review/v1', 'state': state,
+            'storage': {name: storage[name] for name in (*mounts, 'usb_export')},
+            'management_listener': management['listener'],
+            'transport_provenance': 'not_verified_by_reader',
+            'remote_browsing_enabled': False, 'remote_transfer_enabled': False,
+            'note': 'Observation only, not current pairing, private storage or write authorization. Pi remains independent.'}
 
 
 def native_snapshot_path(path):
@@ -242,6 +296,7 @@ def main():
     command.add_argument('source', type=Path); command.add_argument('destination', type=Path)
     command = commands.add_parser('manifest'); command.add_argument('vault', type=Path)
     commands.add_parser('routes'); commands.add_parser('privacy-plan')
+    commands.add_parser('companion-report', help='Review native status JSON from stdin; no network or writes')
     args = parser.parse_args()
     try:
         if args.action == 'watch':
@@ -258,6 +313,7 @@ def main():
         elif args.action == 'routes': result = routes()
         elif args.action == 'sync': result = sync_file(args.source, args.destination)
         elif args.action == 'manifest': result = {'manifest': save_manifest(args.vault)}
+        elif args.action == 'companion-report': result = companion_report(sys.stdin.buffer.read(16385))
         else: result = privacy_plan()
         print(json.dumps(result, indent=2))
     except (OSError, ValueError, subprocess.SubprocessError) as error:

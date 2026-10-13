@@ -1,5 +1,19 @@
 # Custom SanDisk rootfs candidates — offline only
 
+Latest model-targeted build: `build/nimbus-custom-rootfs-64gb-beta5/`, including
+the current Pi A/B dashboard and independent vendor-API battery reader. Explicit
+64 GB model intent does not establish hardware compatibility or flash readiness.
+See [beta5 contents, hashes and outstanding gates](FIRMWARE-64GB-BETA5.md).
+Earlier candidates below are retained unchanged.
+
+Latest generic follow-up: `build/nimbus-custom-rootfs-beta4/`, incorporating the
+companion-status helper/current agent and SD diagnostics. Selected source/archive/
+image checks and read-only fsck passed; full regression in the documented compatible
+fixture directory: 263 run, 259 passed, 4 skipped. This is still rootfs-only, NOT
+FLASHABLE, with no installed SFTP or recipient provisioning. See
+[shareable firmware build checkpoint](SHAREABLE-FIRMWARE-RELEASE.md#follow-up-generic-beta4-built-offline).
+The beta2/v1 references below describe earlier checkpoints.
+
 Latest local output: `build/nimbus-custom-rootfs-beta2/`, with private counterpart `.private-provisioning/drive-a-rootfs-beta2/`. See [beta delivery/test plan](BETA1-TEST-PLAN.md). Both remain NOT FLASHABLE; beta1 is retained unchanged. Earlier v4 startup/security evidence remains in [v4 hardening](OFFLINE-CANDIDATE-HARDENING.md); all prior artifacts are retained. The v1 evidence below is historical, not a current delivery recommendation.
 
 Follow-up: [private offline SSH provisioning](OFFLINE-PROVISIONING.md) can create a separately staged per-device candidate under ignored `.private-provisioning/`. That candidate contains a private host key and must never be publicly redistributed. The original generic v1 remains unchanged. [Installed rescue review](RECOVERY-IMAGE-REVIEW.md) identifies the installed rescue in private backups and explains why the raw ext3 artifact is not a vendor update payload. Boot/recovery gates still block flashing.

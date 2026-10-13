@@ -2,7 +2,20 @@
 
 ## Delivery status
 
-### Latest beta3 revision
+### Latest generic beta4 follow-up
+
+New local generic output: `build/nimbus-custom-rootfs-beta4/`, 256 MiB, SHA-256
+`69608cc1d1a4a1fc57d727e93bcb2e34078468b0acfa651fde7ea4f95553bef8`.
+Adds current agent/companion-status and SD diagnostics to the existing UI. No
+private variant, updater wrapper, native installation, SFTP activation or public
+release was created. Selected archive/image source comparisons, rootfs policy,
+module preservation and independent read-only fsck passed. Full regression in a
+compatible private fixture directory: 263 run, 259 passed, 4 skipped. Default
+fixture path portability defects are explicitly recorded, not device failures.
+See [release checkpoint](SHAREABLE-FIRMWARE-RELEASE.md#follow-up-generic-beta4-built-offline).
+**NOT FLASHABLE.** All native/recovery/provisioning/deployment/license gates remain.
+
+### Earlier beta3 revision
 
 **Distribution follow-up:** the owner subsequently authorized attaching the
 generic beta3 image to the experimental prerelease. Only the generic image is
@@ -20,7 +33,7 @@ benchmark files, backups or the device's live SSH identity.
 | Variant | Local image path | SHA-256 |
 | --- | --- | --- |
 | Generic, no personal SSH keys | `build/nimbus-custom-rootfs-beta3/rootfs.ext3.candidate` | `d49d9d095f452c91297dfbaf4ad7f5cab4fbcc3ce761c51d89c9ee43b859da00` |
-| Private drive-a | `.private-provisioning/drive-a-rootfs-beta3/rootfs.ext3.candidate` | `1d49e41fe4968dfd3ed7a369ad64e2ddc62c6d56b804db7fe9423681db51742d` |
+| Private drive-a | `.private-provisioning/drive-a-rootfs-beta3/rootfs.ext3.candidate` | Private checksum retained locally |
 
 Each is **268435456 bytes (256 MiB)**. Both passed builder checks, independent
 read-only `e2fsck -f -n` (exit 0) and complete-artifact integrity audits. Full
@@ -52,7 +65,7 @@ The requested [Nib desktop buddy](DESKTOP-BUDDY.md) is now included in newly nam
 | Variant | Local image path | SHA-256 |
 | --- | --- | --- |
 | Generic | `build/nimbus-custom-rootfs-beta2/rootfs.ext3.candidate` | `9be23fdca5f4196390cfdb3eb96773f46e8ddd703fde6314628a170d5361b3b7` |
-| Private drive-a | `.private-provisioning/drive-a-rootfs-beta2/rootfs.ext3.candidate` | `1fa635225ddcf6d08a2556201f2206c2b7f3b53bc753c2af0feacd7d82350d0d` |
+| Private drive-a | `.private-provisioning/drive-a-rootfs-beta2/rootfs.ext3.candidate` | Private checksum retained locally |
 
 Both remain 256MiB, local and NOT FLASHABLE. Builder fsck/policy/module checks and independent complete-artifact integrity audit passed. Beta regression additionally compares mascot bytes/source hash against each beta2 archive/ext3 image. Latest full suite: **150 run, 148 pass, 2 skips**, with fixture-only host sync isolation described in the buddy notes. Exact overlay/input hashes are in each manifest; native boot/recovery/deployment/licensing gates below remain unchanged. No vendor update container is generated, and no beta2 image is publicly distributed.
 
@@ -63,7 +76,7 @@ Built at implementation checkpoint `e50f628`, with exact input/overlay hashes re
 | Variant | Local image path | SHA-256 |
 | --- | --- | --- |
 | Generic, no personal SSH keys | `build/nimbus-custom-rootfs-beta1/rootfs.ext3.candidate` | `8b35a3aa55d6df7013f7f8a0bd2e86bf1be818b3e8eb55e993fe8be26881e278` |
-| Private, provisioned for drive-a | `.private-provisioning/drive-a-rootfs-beta1/rootfs.ext3.candidate` | `3c602f779a15a6906a3796adfb8101aa5c59d38296d53e332fde3566580d382c` |
+| Private, provisioned for drive-a | `.private-provisioning/drive-a-rootfs-beta1/rootfs.ext3.candidate` | Private checksum retained locally |
 
 Each image is **268435456 bytes (256 MiB)**. Each directory includes `rootfs.tar`, build/policy manifests, checksums, read-only fsck/mkfs logs, UI bundle, separate GameHack source bundle and `NOT-FLASHABLE.txt`. These are rootfs-only build artifacts: kernel, bootloader, rescue, settings/calibration and media partitions remain external.
 

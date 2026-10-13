@@ -16,6 +16,20 @@ ROOT = Path(__file__).resolve().parents[1]
 STOCK_HASH = '4dd2907ec920443855b221b1f67c5086e369b84861fb0a486d74da2c7671b203'
 SSH_HASH = '1bebface41ff6ad832d0b1299ff49aca0698529399054901d860b50a1bb0213c'
 STAMP = 1767225600
+
+
+def target_profile(name):
+    """Build intent, never inferred recipient geometry or hardware acceptance."""
+    if name not in ('generic', 'sandisk-wireless-media-drive-64gb'):
+        raise ValueError('Unsupported firmware target; Wireless Stick/Flash Drive are not Media Drive.')
+    return {'id': name, 'product_family': 'SanDisk Wireless Media Drive',
+            'advertised_internal_storage_gb': 64 if name != 'generic' else None,
+            'capacity_basis': 'requested model, not measured media or partition size',
+            'native_compatibility_verified': False,
+            'rootfs_bytes': 256 * 1024**2,
+            'preserve_recipient_geometry': True,
+            'includes_user_media': False,
+            'includes_bootloader_or_calibration': False}
 spec = importlib.util.spec_from_file_location('rootfs_policy', ROOT / 'scripts/rootfs-policy.py')
 policy = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(policy)
@@ -48,6 +62,7 @@ def write(root, name, data, mode=0o644):
 
 
 def build(args):
+    target = target_profile(getattr(args, 'target', 'generic'))
     provisioning = None
     provision_dir = getattr(args, 'provisioning_dir', None)
     if provision_dir:
@@ -181,6 +196,7 @@ def build(args):
     with (output / 'fsck-readonly.log').open('w') as log:
         subprocess.run(['e2fsck', '-f', '-n', str(image)], check=True, stdout=log, stderr=subprocess.STDOUT)
     manifest = {'schema': 'nimbus-custom-rootfs/v1', 'flash_ready': False,
+                 'target_hardware': target,
                 'boot_tested': False, 'recovery_tested': False, 'vendor_update_container': False,
                  'stock_rootfs_sha256': STOCK_HASH, 'ssh_sha256': SSH_HASH,
                  'offline_policy_pass': True,
@@ -222,6 +238,8 @@ if __name__ == '__main__':
     parser.add_argument('--stock-rootfs', type=Path, required=True)
     parser.add_argument('--ssh-binary', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--target', choices=('generic', 'sandisk-wireless-media-drive-64gb'), default='generic',
+                        help='Requested model only; never authorizes a flash or sets media geometry')
     parser.add_argument('--provisioning-dir', type=Path, help='Optional PRIVATE per-device SSH bundle')
     parser.add_argument('--dropbearkey', type=Path, help='Trusted host validator required with provisioning')
     args = parser.parse_args()

@@ -13,12 +13,18 @@ case "${1:-help}" in
     help|--help)
         printf '%s\n' 'Nimbus native agent (candidate; not installed)' \
             'status                 Read local kernel/network/storage/power inventory' \
-            'capabilities           Inspect available binaries and reported Wi-Fi modes' \
+             'capabilities           Inspect available binaries and reported Wi-Fi modes' \
+             'companion-status       Read-only GameHack integration readiness JSON' \
             'hash FILE              SHA-256 of one explicitly selected regular file' \
             'settings [arguments]   Persistent ON/OFF feature menu and settings' \
             'capture IFACE FILE authorized' \
             '                       Optional bounded ordinary-interface capture' \
             'No passwords, radio reconfiguration, service shutdown, or firmware writes.'
+        ;;
+    companion-status)
+        [ "$#" -eq 1 ] || fail 'companion-status takes no arguments'
+        directory=$(CDPATH= cd "$(dirname "$0")" && pwd) || fail 'Cannot locate companion module'
+        exec sh "$directory/nimbus-companion-status.sh"
         ;;
     settings)
         shift

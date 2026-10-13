@@ -5,6 +5,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from fixture_support import fixture_temp, fixed_paths
 
 ROOT=Path(__file__).resolve().parents[1]
 SCRIPT=ROOT/'device/nimbus-pause-restart-trial.sh'
@@ -61,10 +62,9 @@ kill() {
         text=SCRIPT.read_text().replace('[ "$(id -u)" = 0 ]',':')
         for old,path in inputs.items():text=text.replace(old,hashlib.sha256(path.read_bytes()).hexdigest())
         text=text.replace("stat -c '%u:%g:%a'","stat -c '0:0:%a'")
-        text=text.replace("root_dev=$(stat -c '%d' /)","root_dev=$(stat -c '%d' '"+str(base)+"')")
         # Rewrite fixed paths, but leave semantic mountpoint fields in awk unchanged.
-        for name in ('/proc/','/sys/','/tmp/','/etc/','/opt/','/nimbus/'):
-            text=text.replace(name,str(base/name.strip('/'))+'/')
+        text=fixed_paths(text,base,('/proc/','/sys/','/tmp/','/etc/','/opt/','/nimbus/'))
+        text=text.replace("root_dev=$(stat -c '%d' /)","root_dev=$(stat -c '%d' '"+str(base)+"')")
         text=text.replace('for dir in /tmp ', 'for dir in "'+str(base/'tmp')+'" ')
         for name in ('/etc','/opt','/nimbus'):
             text=text.replace(' '+name+' ', ' "'+str(base/name.strip('/'))+'" ')
@@ -75,7 +75,7 @@ kill() {
         return stage,proc,database
 
     def run_case(self,mode='--worker',**kwargs):
-        with tempfile.TemporaryDirectory() as folder:
+        with fixture_temp() as folder:
             stage,proc,database=self.fixture(Path(folder),**kwargs)
             if mode=='--start':(stage/'started').unlink()
             before=database.read_bytes()

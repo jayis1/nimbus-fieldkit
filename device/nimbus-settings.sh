@@ -8,10 +8,15 @@ BASE=$(CDPATH= cd "$(dirname "$SELF")" && pwd) || exit 2
 STATE="${NIMBUS_STATE_DIR:-$BASE/.settings}"
 FEATURES='network_health watchdog speed_tests backup_vault offline_toolbox storage_alerts file_sync pi_jobs local_git encrypted_archives'
 fail() { printf '%s\n' "$1" >&2; exit 2; }
+media_guard() {
+    [ -f "$BASE/nimbus-media-guard.sh" ] && [ ! -L "$BASE/nimbus-media-guard.sh" ] || fail 'Missing media ownership guard'
+    sh "$BASE/nimbus-media-guard.sh" "$1" "$2" >/dev/null || fail 'Media access refused; USB mode and mounts unchanged'
+}
 valid_feature() {
     case "$1" in network_health|watchdog|speed_tests|backup_vault|offline_toolbox|storage_alerts|file_sync|pi_jobs|local_git|encrypted_archives) return 0;; *) return 1;; esac
 }
 enabled() {
+    sh "$BASE/nimbus-media-guard.sh" check-read "$STATE" >/dev/null 2>&1 || return 1
     [ ! -L "$STATE" ] && [ ! -L "$STATE/$1" ] && [ -f "$STATE/$1" ] || return 1
     [ "$(cat "$STATE/$1" 2>/dev/null)" = on ]
 }
@@ -43,6 +48,7 @@ capability() {
     esac
 }
 write_setting() {
+    media_guard check-write "$STATE"
     [ ! -L "$STATE" ] || fail 'Refusing a symlink settings directory'
     mkdir -p "$STATE" || fail 'Settings directory is not writable'
     [ -d "$STATE" ] || fail 'Invalid settings directory'
@@ -51,16 +57,17 @@ write_setting() {
     mkdir "$STATE/.write-lock" 2>/dev/null || fail 'Settings busy or stale .write-lock; review before retrying'
     temporary="$STATE/.toggle.$$"
     if (set -C; printf '%s\n' "$2" > "$temporary"); then
+        # On refusal, preserve partial file and lock rather than touching media
+        # after ownership was observed lost.
+        media_guard check-write "$STATE"
         if mv -f "$temporary" "$STATE/$1"; then
-            rmdir "$STATE/.write-lock"
+            media_guard check-write "$STATE"
+            rmdir "$STATE/.write-lock" || fail 'Setting saved but lock release failed; inspect retained state'
         else
-            rm -f "$temporary"
-            rmdir "$STATE/.write-lock"
-            fail 'Could not commit setting'
+            fail 'Could not commit setting; partial evidence and lock retained'
         fi
     else
-        rmdir "$STATE/.write-lock"
-        fail 'Could not create private temporary setting'
+        fail 'Could not create private temporary setting; lock retained for inspection'
     fi
 }
 require_enabled() {
@@ -88,13 +95,20 @@ copy_verified() {
     source="$1"; destination="$2"
     [ -f "$source" ] && [ ! -L "$source" ] || fail 'Choose one regular, non-symlink source file'
     [ -d "$destination" ] && [ ! -L "$destination" ] || fail 'Destination must be an existing non-symlink directory'
+    media_guard check-read "$source"
+    media_guard check-write "$destination"
     size=$(wc -c < "$source")
     [ "$size" -le 67108864 ] || fail 'File exceeds 64 MiB limit'
     filename=$(basename "$source")
     case "$filename" in ''|.|..|*[!a-zA-Z0-9._-]*) fail 'Use a simple filename containing letters, digits, dot, underscore or hyphen';; esac
     target="$destination/$filename"
+    [ ! -e "$target" ] && [ ! -L "$target" ] || fail 'Copy destination already exists; never open existing files or special nodes'
     checksum=$(sha256sum < "$source") || fail 'Source checksum failed'
+    media_guard check-read "$source"
+    media_guard check-write "$destination"
     if (set -C; cat "$source" > "$target"); then
+        media_guard check-read "$source"
+        media_guard check-write "$destination"
         copied=$(sha256sum < "$target") || fail 'Readback checksum failed; keep output for inspection'
         [ "$copied" = "$checksum" ] || fail 'Checksum mismatch; output may be partial, do not use it'
         printf 'Verified copy: %s\nSHA-256: %s\n' "$target" "$copied"
@@ -103,6 +117,7 @@ copy_verified() {
     fi
 }
 show() {
+    media_guard check-read "$STATE"
     printf 'Nimbus features — all default OFF; monitor mode excluded\n'
     for feature in $FEATURES; do
         value=OFF; enabled "$feature" && value=ON
@@ -198,6 +213,7 @@ case "${1:-show}" in
                     printf 'Opaque archive storage only; encryption/authenticity is not validated here.\n'
                 fi
                 [ ! -L "$BASE/vault" ] || fail 'Refusing symlink vault'
+                media_guard check-write "$BASE/vault"
                 mkdir -p "$BASE/vault" || fail 'Cannot create local vault'
                 copy_verified "$1" "$BASE/vault";;
             file_sync) [ "$#" -eq 2 ] || fail 'Usage: run file_sync FILE DIRECTORY'; copy_verified "$1" "$2";;
@@ -209,6 +225,7 @@ case "${1:-show}" in
                 [ "$#" -eq 1 ] || fail 'Select a new repository name'
                 case "$1" in ''|.|..|*[!a-zA-Z0-9._-]*) fail 'Invalid repository name';; esac
                 [ ! -L "$BASE/repos" ] || fail 'Refusing symlink repository root'
+                media_guard check-write "$BASE/repos"
                 mkdir -p "$BASE/repos" || fail 'Cannot create repository root'
                 mkdir "$BASE/repos/$1.git" || fail 'Repository already exists or destination is not writable'
                 git init --bare "$BASE/repos/$1.git";;

@@ -27,11 +27,15 @@ class ImageStartTests(unittest.TestCase):
         tool.write_text('#!/bin/sh\ncase "$1" in dropbearkey) [ "$(cat "$4")" = valid-fixture ];; dropbear) exit 0;; *) exit 1;; esac\n')
         tool.chmod(0o700)
         script = (ROOT / 'device/image-start.sh').read_text()
+        guard = (ROOT / 'device/nimbus-media-guard.sh').read_text()
         for old, new in [('/etc/nimbus', str(self.keys)), ('/opt/nimbus', str(self.trusted)),
                          ('/mnt/storage', str(self.storage)), ('/proc/mounts', str(self.proc / 'mounts')),
                          ('/proc/modules', str(self.proc / 'modules')), ('/sys/class/net/wlan1', str(self.root / 'net')),
                          ('/var/log', str(self.root / 'log')), ('/var/run', str(self.root / 'log'))]:
             script = script.replace(old, new)
+            guard = guard.replace(old, new)
+        guard = guard.replace('PROC=${NIMBUS_PROC_DIR:-/proc}', 'PROC='+str(self.proc))
+        (self.trusted/'native/nimbus-media-guard.sh').write_text(guard)
         # Fixtures are user-owned, not a native root-ownership validation.
         script = script.replace('0:0:', f'{os.getuid()}:{os.getgid()}:')
         self.script = self.root / 'start.sh'; self.script.write_text(script)
